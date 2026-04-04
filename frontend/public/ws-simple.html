@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head><title>WS Test</title></head>
+<body>
+<h1>WebSocket 测试</h1>
+<div id="status">状态：测试中...</div>
+<div id="log"></div>
+<script>
+const log = document.getElementById('log');
+const status = document.getElementById('status');
+const addLog = (msg) => log.innerHTML += '<div>' + msg + '</div>';
+
+addLog('正在连接 ws://localhost:8080...');
+
+try {
+    const ws = new WebSocket('ws://localhost:8080');
+    
+    ws.onopen = () => {
+        addLog('✅ 连接成功!');
+        status.innerHTML = '状态：已连接 ✅';
+        status.style.background = '#d4edda';
+        ws.send('/help');
+    };
+    
+    ws.onmessage = (e) => {
+        addLog('📩 收到：' + e.data);
+    };
+    
+    ws.onerror = (e) => {
+        addLog('❌ 错误：' + JSON.stringify(e));
+        status.innerHTML = '状态：连接失败 ❌';
+        status.style.background = '#f8d7da';
+    };
+    
+    ws.onclose = () => {
+        addLog('🔌 连接关闭');
+    };
+} catch (e) {
+    addLog('❌ 异常：' + e.message);
+    status.innerHTML = '状态：异常 ❌';
+    status.style.background = '#f8d7da';
+}
+</script>
+</body>
+</html>

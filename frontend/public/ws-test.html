@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket 测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .connected { background: #d4edda; color: #155724; }
+        .disconnected { background: #f8d7da; color: #721c24; }
+        .log {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔌 WebSocket 连接测试</h1>
+    
+    <div id="status" class="status disconnected">
+        状态：未连接
+    </div>
+    
+    <div>
+        <button onclick="connect()">连接</button>
+        <button onclick="disconnect()">断开</button>
+        <button onclick="sendLogin()">发送登录</button>
+        <button onclick="sendRegister()">发送注册</button>
+        <button onclick="sendHelp()">发送 /help</button>
+        <button onclick="clearLog()">清空日志</button>
+    </div>
+    
+    <h3>📋 日志</h3>
+    <div id="log" class="log"></div>
+    
+    <script>
+        let ws = null;
+        
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString('zh-CN');
+            const colors = {
+                info: '#333',
+                success: '#28a745',
+                error: '#dc3545',
+                sent: '#007bff',
+                received: '#6f42c1'
+            };
+            logDiv.innerHTML += `<div style="color: ${colors[type] || colors.info}">[${time}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function updateStatus(connected) {
+            const statusDiv = document.getElementById('status');
+            if (connected) {
+                statusDiv.className = 'status connected';
+                statusDiv.textContent = '状态：已连接 ✅';
+            } else {
+                statusDiv.className = 'status disconnected';
+                statusDiv.textContent = '状态：未连接 ❌';
+            }
+        }
+        
+        function connect() {
+            const url = 'ws://localhost:8080';
+            log(`正在连接到 ${url}...`);
+            
+            try {
+                ws = new WebSocket(url);
+                
+                ws.onopen = () => {
+                    log('连接成功！✅', 'success');
+                    updateStatus(true);
+                };
+                
+                ws.onerror = (error) => {
+                    log(`连接错误：${error}`, 'error');
+                    updateStatus(false);
+                };
+                
+                ws.onmessage = (event) => {
+                    log(`收到：${event.data}`, 'received');
+                };
+                
+                ws.onclose = () => {
+                    log('连接已关闭', 'info');
+                    updateStatus(false);
+                };
+            } catch (error) {
+                log(`创建连接失败：${error.message}`, 'error');
+                updateStatus(false);
+            }
+        }
+        
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                log('已断开连接');
+                ws = null;
+            }
+        }
+        
+        function send(command) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(command);
+                log(`发送：${command}`, 'sent');
+            } else {
+                log('未连接，无法发送', 'error');
+            }
+        }
+        
+        function sendLogin() {
+            send('/login testuser 123456');
+        }
+        
+        function sendRegister() {
+            send('/register testuser 123456');
+        }
+        
+        function sendHelp() {
+            send('/help');
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+        
+        // 页面加载时尝试连接
+        updateStatus(false);
+        log('页面加载完成，点击"连接"按钮开始测试');
+    </script>
+</body>
+</html>

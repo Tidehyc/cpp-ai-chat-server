@@ -58,23 +58,28 @@ std::string WebSocketParser::extract_websocket_key(const std::string& request) {
     return request.substr(pos, end - pos);
 }
 
-std::string WebSocketParser::create_handshake_response(const std::string& key) {
+std::string WebSocketParser::create_handshake_response(const std::string& key, const std::string& protocol) {
     // 计算 Sec-WebSocket-Accept
     std::string accept_input = key + WS_GUID;
-    
+
     unsigned char hash[SHA_DIGEST_LENGTH];
     EVP_Digest(accept_input.c_str(), accept_input.length(), hash, nullptr, EVP_sha1(), nullptr);
-    
+
     std::string accept = base64_encode(hash, SHA_DIGEST_LENGTH);
-    
+
     std::string response =
         "HTTP/1.1 101 Switching Protocols\r\n"
         "Upgrade: websocket\r\n"
         "Connection: Upgrade\r\n"
-        "Sec-WebSocket-Accept: " + accept + "\r\n"
-        "Sec-WebSocket-Protocol: chat\r\n"
-        "\r\n";
+        "Sec-WebSocket-Accept: " + accept + "\r\n";
     
+    // 只有当客户端请求了子协议时才返回
+    if (!protocol.empty()) {
+        response += "Sec-WebSocket-Protocol: " + protocol + "\r\n";
+    }
+    
+    response += "\r\n";
+
     return response;
 }
 

@@ -49,11 +49,22 @@ std::string AIClient::chat(const std::string& message, const std::vector<AIMessa
         {"temperature", 0.7}
     };
 
-    // 添加上下文消息
-    for (const auto& msg : context) {
+    // 添加系统提示（预设 prompt）
+    if (!context.empty() && !context[0].content.empty()) {
         request_body["messages"].push_back({
-            {"role", msg.role},
-            {"content", msg.content}
+            {"role", "system"},
+            {"content", context[0].content}
+        });
+    }
+
+    // 添加上下文消息（跳过第一个，因为它已经是 system prompt）
+    for (size_t i = (context.empty() || !context[0].content.empty()) ? 0 : 0; i < context.size(); ++i) {
+        // 如果第一个消息是 system prompt，跳过它
+        if (i == 0 && !context.empty() && !context[0].content.empty()) continue;
+        
+        request_body["messages"].push_back({
+            {"role", context[i].role},
+            {"content", context[i].content}
         });
     }
 

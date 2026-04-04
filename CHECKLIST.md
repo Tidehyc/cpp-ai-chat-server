@@ -1,7 +1,7 @@
 # 项目完成检查清单
 
-_版本：v1.0.0_
-_完成日期：2026-03-28_
+_版本：v1.1.1_
+_完成日期：2026-04-04_
 
 ---
 
@@ -18,6 +18,9 @@ _完成日期：2026-03-28_
 - [x] 消息搜索
 - [x] 历史记录
 - [x] 群聊功能
+- [x] 好友系统
+- [x] 私聊功能
+- [x] Web 前端
 
 ### 质量保障
 - [x] 单元测试
@@ -31,27 +34,19 @@ _完成日期：2026-03-28_
 
 ### 用户文档
 - [x] README.md
-- [x] QUICKSTART.md
-- [x] MANUAL.md
-- [x] QUICK_REFERENCE.md
 - [x] RELEASE_NOTES.md
 
 ### 开发文档
-- [x] docs/requirements.md
-- [x] docs/architecture.md
 - [x] docs/devlog.md
 - [x] docs/study_notes.md
 - [x] docs/study_notes_phase4.md
 - [x] docs/study_notes_phase4.2.md
 - [x] docs/study_notes_phase5.2.md
+- [x] docs/study_notes_phase5.3.md
+- [x] docs/study_notes_phase5.4.md
 
 ### 部署文档
 - [x] docs/DOCKER_GUIDE.md
-- [x] docs/DOCKER_TEST_CHECKLIST.md
-- [x] docs/DOCKER_TEST_REPORT.md
-- [x] docs/DOCKER_FINAL_TEST_REPORT.md
-- [x] docs/PROJECT_SUMMARY.md
-- [x] docs/TESTING.md
 
 ---
 
@@ -147,7 +142,7 @@ _完成日期：2026-03-28_
 |------|------|------|
 | 代码量 | 4000+ 行 | ✅ |
 | 测试代码 | 500+ 行 | ✅ |
-| 文档数量 | 15+ 个 | ✅ |
+| 文档数量 | 10+ 个 | ✅ |
 | 单元测试 | 20 个 | ✅ |
 | 测试通过率 | 100% | ✅ |
 | Docker 镜像 | 89.4MB | ✅ |
@@ -160,11 +155,11 @@ _完成日期：2026-03-28_
 
 **项目状态**：✅ 完成
 
-**版本**：v1.0.0
+**版本**：v1.1.1
 
-**发布日期**：2026-03-28
+**发布日期**：2026-04-04
 
 ---
 
 _检查人：AI Assistant_
-_检查日期：2026-03-28_
+_检查日期：2026-04-03_

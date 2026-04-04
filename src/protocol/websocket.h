@@ -46,8 +46,8 @@ public:
     static std::string decode(const WebSocketFrame& frame);
     
     // 生成 WebSocket 握手响应
-    static std::string create_handshake_response(const std::string& key);
-    
+    static std::string create_handshake_response(const std::string& key, const std::string& protocol = "");
+
     // 检查是否是 WebSocket 握手请求
     static bool is_handshake_request(const std::string& request);
     

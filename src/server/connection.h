@@ -19,6 +19,7 @@ class RoomManager;
 class PresetManager;
 class ConversationManager;
 class MessageHistoryManager;
+class FriendManager;
 
 // 连接状态
 enum class ConnectionState {
@@ -40,7 +41,8 @@ struct Session {
     std::string current_room = "general";  // 当前所在房间
     std::string current_preset = "friend"; // 当前 AI 预设
     std::string status = "online";         // 在线状态
-    
+    std::string session_token;             // 会话 token
+
     bool is_authenticated() const { return user_id > 0; }
 };
 
@@ -49,7 +51,8 @@ public:
     explicit Connection(boost::asio::ip::tcp::socket socket,
                         Database* db, AIClient* ai_client,
                         UserManager* user_manager, RoomManager* room_manager, PresetManager* preset_manager,
-                        ConversationManager* conversation_manager, MessageHistoryManager* history_manager);
+                        ConversationManager* conversation_manager, MessageHistoryManager* history_manager,
+                        FriendManager* friend_manager);
     ~Connection();
 
     void start();
@@ -83,6 +86,10 @@ private:
     void cmd_login(const std::vector<std::string>& args);
     void cmd_users(const std::vector<std::string>& args);
     void cmd_status(const std::vector<std::string>& args);
+    void cmd_friend(const std::vector<std::string>& args);
+    void cmd_private_message(const std::vector<std::string>& args);
+    void broadcast_online_users();
+    void send_room_list();
     
     // 房间命令
     void cmd_rooms(const std::vector<std::string>& args);
@@ -111,6 +118,9 @@ private:
     
     // 工具方法
     void send_system_message(const std::string& content);
+    void send_room_list_json();
+    void broadcast_room_list();
+    void send_offline_messages();
     std::string get_room_ai_prompt(const std::string& room_name);
     std::string get_preset_ai_prompt(const std::string& preset_name);
 
@@ -126,6 +136,7 @@ private:
     // 写入队列
     std::vector<std::vector<uint8_t>> write_queue_;
     bool is_writing_;
+    bool needs_close_;  // 标记需要在写入完成后关闭连接
     
     // 批量发送优化
     std::vector<std::vector<uint8_t>> pending_writes_;
@@ -139,6 +150,7 @@ private:
     PresetManager* preset_manager_;
     ConversationManager* conversation_manager_;
     MessageHistoryManager* history_manager_;
+    FriendManager* friend_manager_;
 
     // 聊天室
     std::string current_chat_room_;

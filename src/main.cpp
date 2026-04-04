@@ -7,6 +7,7 @@
 #include "preset/preset_manager.h"
 #include "conversation/conversation.h"
 #include "history/message_history.h"
+#include "friend/friend_manager.h"
 #include "utils/logger.h"
 #include <boost/asio.hpp>
 #include <iostream>
@@ -70,9 +71,12 @@ int main(int argc, char* argv[]) {
         // 初始化消息历史管理器
         chat::MessageHistoryManager history_manager(&db);
 
+        // 初始化好友管理器
+        chat::FriendManager friend_manager(&db);
+
         // 启动服务器
         boost::asio::io_context io_context;
-        chat::Server server(io_context, port, &db, &ai_client, &user_manager, &room_manager, &preset_manager, &conversation_manager, &history_manager);
+        chat::Server server(io_context, port, &db, &ai_client, &user_manager, &room_manager, &preset_manager, &conversation_manager, &history_manager, &friend_manager);
         server.start();  // 开始接受连接
 
         std::cout << "Server is running on port " << port << std::endl;

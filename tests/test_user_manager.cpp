@@ -44,17 +44,20 @@ TEST_F(UserManagerTest, RegisterUser) {
 TEST_F(UserManagerTest, UserLogin) {
     // 先注册
     user_manager_->register_user("testuser", "123456");
-    
+
     User user;
     // 正确密码登录成功
-    EXPECT_TRUE(user_manager_->login("testuser", "123456", user));
+    LoginResult result1 = user_manager_->login("testuser", "123456", user);
+    EXPECT_EQ(result1, LoginResult::SUCCESS);
     EXPECT_EQ(user.username, "testuser");
-    
+
     // 错误密码登录失败
-    EXPECT_FALSE(user_manager_->login("testuser", "wrong_password", user));
-    
+    LoginResult result2 = user_manager_->login("testuser", "wrong_password", user);
+    EXPECT_EQ(result2, LoginResult::WRONG_PASSWORD);
+
     // 不存在的用户登录失败
-    EXPECT_FALSE(user_manager_->login("nonexistent", "123456", user));
+    LoginResult result3 = user_manager_->login("nonexistent", "123456", user);
+    EXPECT_EQ(result3, LoginResult::USER_NOT_FOUND);
 }
 
 // 测试用户状态更新

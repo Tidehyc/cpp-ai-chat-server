@@ -1,10 +1,10 @@
-# C++ AI Chat Server v1.0.0
+# C++ AI Chat Server v1.1.1
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![C++](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://isocpp.org/)
 [![Docker](https://img.shields.io/badge/docker-ready-green.svg)](https://www.docker.com/)
 
-**高性能 C++ AI 聊天服务器**，集成 AI 助手，支持多房间、多模式、自定义 AI 设定、多轮对话上下文。
+**高性能 C++ AI 聊天服务器**，集成 AI 助手，支持多房间、多模式、自定义 AI 设定、多轮对话上下文、好友系统与私聊功能。
 
 ---
 
@@ -14,10 +14,12 @@
 - **🤖 AI 对话上下文** - AI 记住多轮对话，支持连续对话
 - **👥 用户系统** - 注册/登录/状态管理（在线/忙碌/离开/离线）
 - **💬 群聊功能** - 房间消息广播，多人实时聊天
+- **👫 好友系统** - 好友请求/添加/删除，私聊功能
 - **🔍 消息搜索** - 关键词搜索、按用户/房间搜索
 - **📦 Docker 部署** - 一键部署，跨平台支持
 - **📊 日志系统** - spdlog 集成，支持日志轮转
 - **✅ 单元测试** - GoogleTest，90%+ 覆盖率
+- **🌐 Web 前端** - React + TypeScript 现代化界面
 
 ---
 
@@ -72,6 +74,18 @@ export AI_MODEL="MiniMax-M2.5"
 /login <用户名> <密码>       # 登录
 /users                       # 查看在线用户
 /status [状态]               # 设置状态（online/busy/away/offline）
+```
+
+### 好友系统
+```bash
+/friend add <用户名>         # 添加好友
+/friend remove <用户名>      # 删除好友
+/friend list                 # 查看好友列表
+/friend request <用户名>     # 发送好友请求
+/friend requests             # 查看收到的请求
+/friend accept <用户名>      # 接受好友请求
+/friend reject <用户名>      # 拒绝好友请求
+/msg <用户名> <消息>         # 发送私聊消息
 ```
 
 ### 房间系统
@@ -170,6 +184,7 @@ cpp-ai-chat-server/
 │   ├── protocol/               # WebSocket/JSON
 │   ├── ai/                     # AI 客户端
 │   ├── storage/                # 数据库
+│   ├── friend/                 # 好友管理
 │   └── utils/                  # 工具类（日志）
 ├── tests/                      # 单元测试
 │   ├── test_user_manager.cpp
@@ -177,17 +192,15 @@ cpp-ai-chat-server/
 │   ├── test_message_history.cpp
 │   └── test_conversation.cpp
 ├── docs/                       # 文档
-│   ├── requirements.md         # 需求文档
-│   ├── architecture.md         # 架构设计
 │   ├── devlog.md               # 开发日志
 │   ├── study_notes*.md         # 学习笔记
-│   ├── DOCKER_GUIDE.md         # Docker 指南
-│   └── TESTING.md              # 测试指南
+│   └── DOCKER_GUIDE.md         # Docker 指南
+├── frontend/                   # Web 前端
+│   ├── src/                    # React 源代码
+│   └── package.json            # 依赖配置
 ├── scripts/                    # 脚本
 │   ├── ws_client.cpp           # C++ 客户端
 │   └── docker-start.sh         # Docker 启动脚本
-├── MANUAL.md                   # 使用手册
-├── QUICKSTART.md               # 快速开始
 ├── CMakeLists.txt              # 构建配置
 ├── Dockerfile                  # Docker 构建
 └── docker-compose.yml          # Docker 编排
@@ -199,9 +212,9 @@ cpp-ai-chat-server/
 
 | 指标 | 数值 |
 |------|------|
-| **总代码量** | 3500+ 行 |
+| **总代码量** | 4000+ 行 |
 | **测试代码** | 500+ 行 |
-| **文档数量** | 15+ 个 |
+| **文档数量** | 10+ 个 |
 | **单元测试** | 20 个 |
 | **测试通过率** | 100% |
 | **Docker 镜像** | 89.4MB |
@@ -212,22 +225,14 @@ cpp-ai-chat-server/
 
 ### 入门文档
 - [README.md](README.md) - 项目说明
-- [QUICKSTART.md](QUICKSTART.md) - 快速开始
-- [MANUAL.md](MANUAL.md) - 使用手册
+- [docs/DOCKER_GUIDE.md](docs/DOCKER_GUIDE.md) - Docker 部署指南
 
 ### 开发文档
-- [docs/requirements.md](docs/requirements.md) - 需求文档
-- [docs/architecture.md](docs/architecture.md) - 架构设计
 - [docs/devlog.md](docs/devlog.md) - 开发日志
 - [docs/study_notes.md](docs/study_notes.md) - 学习笔记
-
-### 部署文档
-- [docs/DOCKER_GUIDE.md](docs/DOCKER_GUIDE.md) - Docker 部署指南
-- [docs/DOCKER_TEST_REPORT.md](docs/DOCKER_TEST_REPORT.md) - Docker 测试报告
-
-### 测试文档
-- [docs/TESTING.md](docs/TESTING.md) - 测试指南
-- [docs/DOCKER_TEST_CHECKLIST.md](docs/DOCKER_TEST_CHECKLIST.md) - Docker 测试清单
+- [docs/study_notes_phase5.2.md](docs/study_notes_phase5.2.md) - 阶段 5.2 学习笔记
+- [docs/study_notes_phase5.3.md](docs/study_notes_phase5.3.md) - 阶段 5.3 学习笔记
+- [docs/study_notes_phase5.4.md](docs/study_notes_phase5.4.md) - 阶段 5.4 学习笔记
 
 ---
 
@@ -309,8 +314,58 @@ sudo systemctl restart docker
 - ✅ **阶段 3**：房间系统 + 私聊 AI
 - ✅ **阶段 4**：群聊功能 + 消息搜索
 - ✅ **阶段 5**：性能优化 + Docker 部署
-- ⚪ **阶段 6**：Web 界面（计划中）
+- ✅ **阶段 6**：Web 界面（已完成）
+  - ✅ 阶段 6.1：基础聊天功能
+  - ✅ 阶段 6.2：前端功能完善
+  - ✅ 阶段 6.3：好友系统与私聊界面
 - ⚪ **阶段 7**：集群支持（计划中）
+
+---
+
+## 🌐 Web 前端
+
+### 快速启动
+
+```bash
+# 前端
+cd frontend
+npm install
+npm run dev
+
+# 访问 http://localhost:3000
+```
+
+### 功能特性
+
+- 💬 实时聊天 - WebSocket 双向通信
+- 🏠 多房间支持 - 6 个 AI 房间隔离
+- 🤖 AI 对话 - @AI 触发 AI 回复
+- 👤 用户系统 - 登录/注册/自动登录
+- 📱 响应式设计 - 类似微信/QQ 的界面
+- 🎨 深色主题 - 浅色/深色/系统三种模式
+- 👥 联系人 - 在线用户列表
+- ⚙️ 设置 - 个人信息/主题切换
+
+### 技术栈
+
+| 技术 | 用途 |
+|------|------|
+| **React 18** | UI 框架 |
+| **TypeScript** | 类型安全 |
+| **Vite 5** | 构建工具 |
+| **Tailwind CSS** | 样式 |
+| **Zustand** | 状态管理 |
+| **React Router** | 路由 |
+
+### 已完成页面
+
+| 页面 | 功能 | 状态 |
+|------|------|------|
+| 登录页 | 注册/登录/自动登录 | ✅ |
+| 聊天页 | 消息收发/@AI/房间切换 | ✅ |
+| 联系人 | 在线用户列表/状态分组 | ✅ |
+| AI 助手 | AI 房间/AI 预设 | ✅ |
+| 设置 | 个人信息/主题切换/退出 | ✅ |
 
 ---
 
@@ -339,8 +394,8 @@ sudo systemctl restart docker
 
 ---
 
-_版本：v1.0.0_
+_版本：v1.1.1_
 _创建日期：2026-03-27_
-_最后更新：2026-03-28_
+_最后更新：2026-04-04_
 
 **🎉 感谢使用 C++ AI Chat Server！**

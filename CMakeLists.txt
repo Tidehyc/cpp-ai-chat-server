@@ -56,6 +56,7 @@ set(SOURCES
     src/chat/chat_room.cpp
     src/conversation/conversation.cpp
     src/history/message_history.cpp
+    src/friend/friend_manager.cpp
 )
 
 # 头文件
@@ -76,6 +77,7 @@ set(HEADERS
     src/chat/chat_room.h
     src/conversation/conversation.h
     src/history/message_history.h
+    src/friend/friend_manager.h
 )
 
 # 可执行文件
@@ -141,6 +143,7 @@ target_link_libraries(chat_server_test PRIVATE
     SQLite::SQLite3
     ${CURL_LIBRARIES}
     nlohmann_json::nlohmann_json
+    spdlog::spdlog
     pthread
 )
 

@@ -12,13 +12,17 @@ class AIClient;
 class UserManager;
 class RoomManager;
 class PresetManager;
+class ConversationManager;
+class MessageHistoryManager;
+class FriendManager;
 
 class Server {
 public:
     Server(boost::asio::io_context& io_context, short port,
            Database* db, AIClient* ai_client,
            UserManager* user_manager, RoomManager* room_manager, PresetManager* preset_manager,
-           ConversationManager* conversation_manager, MessageHistoryManager* history_manager);
+           ConversationManager* conversation_manager, MessageHistoryManager* history_manager,
+           FriendManager* friend_manager);
     void start();
 
 private:
@@ -34,6 +38,7 @@ private:
     PresetManager* preset_manager_;
     ConversationManager* conversation_manager_;
     MessageHistoryManager* history_manager_;
+    FriendManager* friend_manager_;
 };
 
 } // namespace chat
