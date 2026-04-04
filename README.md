@@ -376,6 +376,12 @@ npm run dev
 
 ---
 
+## 🙏 致谢
+
+- **[ex-skill](https://github.com/mrxiaoge/ex-skill)** - AI 预设系统参考了该项目的 Layer 设计理念，实现了多角色 AI 人格（老师/程序员/作家等）
+
+---
+
 ## 👥 贡献指南
 
 欢迎提交 Issue 和 Pull Request！
