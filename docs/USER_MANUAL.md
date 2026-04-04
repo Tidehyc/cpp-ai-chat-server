@@ -108,7 +108,7 @@ cd frontend
 npm install
 npm run dev
 
-# 访问 http://localhost:3000
+# 访问 http://localhost:5173
 ```
 
 ### 方式 2：本地编译
@@ -504,7 +504,7 @@ AI 会记住对话上下文，支持连续对话：
 
 ### 访问前端
 
-打开浏览器访问：`http://localhost:3000`
+打开浏览器访问：`http://localhost:5173`
 
 ### 登录页面
 
