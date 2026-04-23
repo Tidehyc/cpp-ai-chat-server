@@ -1,0 +1,243 @@
+#!/usr/bin/env python3
+"""Summarize message history benchmark reports into markdown and CSV."""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import re
+from dataclasses import dataclass
+from pathlib import Path
+from statistics import mean
+
+REPORT_RE = re.compile(r"message_history_benchmark_(\d{8})_(\d{6})\.txt$")
+METRIC_RE = re.compile(r"^([a-z_]+)=([0-9]+(?:\.[0-9]+)?)(?:x)?$")
+DEFAULT_WARN_RATIO = 0.80
+
+
+@dataclass
+class Report:
+    stamp: str
+    rows: int
+    rounds: int
+    indexed_total_ms: float
+    indexed_avg_ms: float
+    no_index_total_ms: float
+    no_index_avg_ms: float
+    speedup: float
+    source_file: str
+
+
+def parse_report(path: Path) -> Report:
+    stamp_match = REPORT_RE.search(path.name)
+    if not stamp_match:
+        raise ValueError(f"invalid report name: {path.name}")
+
+    stamp = f"{stamp_match.group(1)}_{stamp_match.group(2)}"
+    metrics: dict[str, float] = {}
+
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+
+        for chunk in line.split(","):
+            part = chunk.strip()
+            match = METRIC_RE.match(part)
+            if not match:
+                continue
+            key, value = match.groups()
+            metrics[key] = float(value)
+
+    required = {
+        "rows",
+        "rounds",
+        "indexed_total_ms",
+        "indexed_avg_ms",
+        "no_index_total_ms",
+        "no_index_avg_ms",
+        "speedup",
+    }
+    missing = sorted(required - metrics.keys())
+    if missing:
+        raise ValueError(f"{path.name} missing metrics: {', '.join(missing)}")
+
+    return Report(
+        stamp=stamp,
+        rows=int(metrics["rows"]),
+        rounds=int(metrics["rounds"]),
+        indexed_total_ms=metrics["indexed_total_ms"],
+        indexed_avg_ms=metrics["indexed_avg_ms"],
+        no_index_total_ms=metrics["no_index_total_ms"],
+        no_index_avg_ms=metrics["no_index_avg_ms"],
+        speedup=metrics["speedup"],
+        source_file=path.name,
+    )
+
+
+def write_csv(path: Path, reports: list[Report]) -> None:
+    with path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(
+            [
+                "stamp",
+                "rows",
+                "rounds",
+                "indexed_total_ms",
+                "indexed_avg_ms",
+                "no_index_total_ms",
+                "no_index_avg_ms",
+                "speedup",
+                "source_file",
+            ]
+        )
+        for r in reports:
+            writer.writerow(
+                [
+                    r.stamp,
+                    r.rows,
+                    r.rounds,
+                    f"{r.indexed_total_ms:.2f}",
+                    f"{r.indexed_avg_ms:.4f}",
+                    f"{r.no_index_total_ms:.2f}",
+                    f"{r.no_index_avg_ms:.4f}",
+                    f"{r.speedup:.2f}",
+                    r.source_file,
+                ]
+            )
+
+
+def build_alerts(reports: list[Report], warn_ratio: float) -> list[str]:
+    latest = reports[-1]
+    avg_speedup = mean(r.speedup for r in reports)
+    threshold = avg_speedup * warn_ratio
+
+    alerts: list[str] = []
+    if latest.speedup < threshold:
+        alerts.append(
+            f"latest_speedup {latest.speedup:.2f}x is below {warn_ratio:.0%} of average speedup ({threshold:.2f}x)"
+        )
+
+    return alerts
+
+
+def write_markdown(path: Path, reports: list[Report], warn_ratio: float) -> None:
+    latest = reports[-1]
+    speedups = [r.speedup for r in reports]
+    alerts = build_alerts(reports, warn_ratio)
+
+    lines = [
+        "# Message History Benchmark Trend Summary",
+        "",
+        f"- report_count: {len(reports)}",
+        f"- latest_report: {latest.source_file}",
+        f"- latest_speedup: {latest.speedup:.2f}x",
+        f"- avg_speedup: {mean(speedups):.2f}x",
+        f"- min_speedup: {min(speedups):.2f}x",
+        f"- max_speedup: {max(speedups):.2f}x",
+        f"- warn_ratio: {warn_ratio:.0%}",
+        "",
+    ]
+
+    if alerts:
+        lines.extend([
+            "## Alerts",
+            "",
+        ])
+        for alert in alerts:
+            lines.append(f"- WARNING: {alert}")
+        lines.append("")
+
+    lines.extend(
+        [
+            "## Trend Table",
+            "",
+            "| stamp | rows | rounds | indexed_total_ms | no_index_total_ms | speedup | file |",
+            "|---|---:|---:|---:|---:|---:|---|",
+        ]
+    )
+
+    for r in reports:
+        lines.append(
+            f"| {r.stamp} | {r.rows} | {r.rounds} | {r.indexed_total_ms:.2f} | {r.no_index_total_ms:.2f} | {r.speedup:.2f}x | {r.source_file} |"
+        )
+
+    lines.extend(
+        [
+            "",
+            "## Notes",
+            "",
+            "- Data source: docs/perf_reports/message_history_benchmark_*.txt",
+            "- This file is generated by scripts/summarize_perf_reports.py",
+            f"- Alert rule: warn when latest speedup falls below {warn_ratio:.0%} of average speedup",
+        ]
+    )
+
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Summarize message history benchmark reports.")
+    parser.add_argument(
+        "--warn-ratio",
+        type=float,
+        default=DEFAULT_WARN_RATIO,
+        help="Warn threshold ratio against average speedup (default: 0.80)",
+    )
+    parser.add_argument(
+        "--fail-on-warn",
+        action="store_true",
+        help="Return non-zero when warning is triggered.",
+    )
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+    warn_ratio = args.warn_ratio
+    if warn_ratio <= 0 or warn_ratio > 1:
+        print("Invalid --warn-ratio, expected range: (0, 1].")
+        return 1
+
+    root = Path(__file__).resolve().parents[1]
+    report_dir = root / "docs" / "perf_reports"
+
+    files = sorted(report_dir.glob("message_history_benchmark_*.txt"))
+    if not files:
+        print("No benchmark report files found.")
+        return 1
+
+    reports = [parse_report(p) for p in files]
+    reports.sort(key=lambda r: r.stamp)
+
+    csv_path = report_dir / "message_history_benchmark_summary.csv"
+    md_path = report_dir / "message_history_benchmark_summary.md"
+
+    write_csv(csv_path, reports)
+    write_markdown(md_path, reports, warn_ratio)
+
+    latest = reports[-1]
+    alerts = build_alerts(reports, warn_ratio)
+
+    print("=== Benchmark Summary ===")
+    print(f"reports={len(reports)}")
+    print(f"latest={latest.source_file}")
+    print(f"latest_speedup={latest.speedup:.2f}x")
+    print(f"warn_ratio={warn_ratio:.0%}")
+    if alerts:
+        for alert in alerts:
+            print(f"WARNING: {alert}")
+        if args.fail_on_warn:
+            print("status=FAILED_ON_WARNING")
+            print(f"summary_md={md_path}")
+            print(f"summary_csv={csv_path}")
+            return 2
+
+    print("status=OK")
+    print(f"summary_md={md_path}")
+    print(f"summary_csv={csv_path}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

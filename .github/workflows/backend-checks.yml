@@ -1,0 +1,78 @@
+name: backend-checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            ninja-build \
+            pkg-config \
+            libboost-system-dev \
+            libsqlite3-dev \
+            libssl-dev \
+            libcurl4-openssl-dev \
+            libspdlog-dev \
+            nlohmann-json3-dev
+
+      - name: Resolve perf warning gate mode
+        env:
+          GITHUB_BASE_REF: ${{ github.base_ref }}
+        run: |
+          PERF_WARN_RATIO="0.80"
+          PERF_WARN_FAIL="0"
+
+          # Strict gate for main branch and PRs targeting main.
+          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            PERF_WARN_FAIL="1"
+          fi
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" && "${GITHUB_BASE_REF}" == "main" ]]; then
+            PERF_WARN_FAIL="1"
+          fi
+
+          echo "PERF_WARN_RATIO=${PERF_WARN_RATIO}" >> "$GITHUB_ENV"
+          echo "PERF_WARN_FAIL=${PERF_WARN_FAIL}" >> "$GITHUB_ENV"
+          echo "Resolved PERF_WARN_FAIL=${PERF_WARN_FAIL} (event=${GITHUB_EVENT_NAME}, ref=${GITHUB_REF}, base_ref=${GITHUB_BASE_REF})"
+
+      - name: Run backend checks
+        run: bash scripts/run_backend_checks.sh
+
+      - name: Show benchmark summary
+        if: always()
+        run: cat docs/perf_reports/message_history_benchmark_summary.md
+
+      - name: Publish benchmark summary to job summary
+        if: always()
+        run: |
+          if [[ -f docs/perf_reports/message_history_benchmark_summary.md ]]; then
+            cat docs/perf_reports/message_history_benchmark_summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload benchmark reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-reports
+          path: |
+            docs/perf_reports/*.txt
+            docs/perf_reports/message_history_benchmark_summary.md
+            docs/perf_reports/message_history_benchmark_summary.csv
+          if-no-files-found: warn
