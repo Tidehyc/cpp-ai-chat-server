@@ -230,6 +230,9 @@ cpp-ai-chat-server/
 
 ### 开发文档
 - [docs/devlog.md](docs/devlog.md) - 开发日志
+- [docs/BACKEND_TODO_CHECKLIST.md](docs/BACKEND_TODO_CHECKLIST.md) - 后端代办清单（按优先级执行）
+- [docs/PERFORMANCE_REPORT_TEMPLATE.md](docs/PERFORMANCE_REPORT_TEMPLATE.md) - 性能报告模板
+- [docs/BRANCH_PROTECTION_REQUIRED_CHECKS.md](docs/BRANCH_PROTECTION_REQUIRED_CHECKS.md) - 分支保护与必过检查配置
 - [docs/study_notes.md](docs/study_notes.md) - 学习笔记
 - [docs/study_notes_phase5.2.md](docs/study_notes_phase5.2.md) - 阶段 5.2 学习笔记
 - [docs/study_notes_phase5.3.md](docs/study_notes_phase5.3.md) - 阶段 5.3 学习笔记
@@ -248,6 +251,49 @@ cd build
 # 查看测试覆盖率
 gcovr -r .. --html --html-details -o coverage.html
 ```
+
+### 一键后端检查（构建 + CTest + 性能基准）
+
+```bash
+bash scripts/run_backend_checks.sh
+```
+
+性能报告模板见 [docs/PERFORMANCE_REPORT_TEMPLATE.md](docs/PERFORMANCE_REPORT_TEMPLATE.md)。
+
+### 性能历史汇总（趋势）
+
+```bash
+python3 scripts/summarize_perf_reports.py
+```
+
+生成文件：
+
+- `docs/perf_reports/message_history_benchmark_summary.md`
+- `docs/perf_reports/message_history_benchmark_summary.csv`
+
+说明：`scripts/run_backend_checks.sh` 已在基准执行后自动调用该汇总脚本；当前规则会在最新 speedup 低于历史均值的 80% 时输出 warning。
+
+可选门禁（默认关闭，不影响本地日常检查）：
+
+```bash
+PERF_WARN_FAIL=1 PERF_WARN_RATIO=0.80 bash scripts/run_backend_checks.sh
+```
+
+- `PERF_WARN_FAIL=1`：当触发 warning 时返回非 0 退出码。
+- `PERF_WARN_RATIO`：阈值比例，取值范围 `(0, 1]`。
+
+### CI 自动检查（GitHub Actions）
+
+- 工作流文件：`.github/workflows/backend-checks.yml`
+- 触发时机：`push`、`pull_request`
+- 执行内容：与本地脚本 `scripts/run_backend_checks.sh` 一致（构建 + CTest + 性能基准）
+- 产物：自动上传 `docs/perf_reports/*.txt` 以及 `message_history_benchmark_summary.md/csv` 作为 workflow artifact
+- 可见性：同时将 summary 输出到 Actions log 与 Job Summary 页面
+- 告警门禁策略：
+  - `main` 分支（push）与目标为 `main` 的 PR：启用 `PERF_WARN_FAIL=1`（触发 warning 即失败）
+  - 其他分支：默认 `PERF_WARN_FAIL=0`（仅告警，不阻断）
+
+分支保护与 required checks 具体配置步骤见 [docs/BRANCH_PROTECTION_REQUIRED_CHECKS.md](docs/BRANCH_PROTECTION_REQUIRED_CHECKS.md)。
 
 ---
 
