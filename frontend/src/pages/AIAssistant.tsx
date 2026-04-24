@@ -5,6 +5,7 @@ import remarkBreaks from 'remark-breaks'
 import { useUserStore } from '../stores/userStore'
 import { useMessageStore } from '../stores/messageStore'
 import { wsService } from '../services/websocket'
+import { Bot, BookOpen, Code2, Download, Globe2, History, Lightbulb, MessageSquare, PlusCircle, Settings, Sparkles, Trash2, Users } from 'lucide-react'
 import type { ConnectionStatus } from '../types'
 
 // 模态框组件
@@ -14,12 +15,12 @@ import ExportModal from '../components/ExportModal'
 
 // AI 预设
 const AI_PRESETS = [
-  { name: 'teacher', label: '👨‍🏫 老师', description: '耐心解答问题' },
-  { name: 'coder', label: '👨‍💻 程序员', description: '编程技术专家' },
-  { name: 'friend', label: '🤝 朋友', description: '知心聊天伙伴' },
-  { name: 'interviewer', label: '🎤 面试官', description: '模拟面试场景' },
-  { name: 'critic', label: '🎭 评论家', description: '专业评论分析' },
-  { name: 'coach', label: '💪 健身教练', description: '健身指导建议' },
+  { name: 'teacher', label: '老师', description: '耐心解答问题' },
+  { name: 'coder', label: '程序员', description: '编程技术专家' },
+  { name: 'friend', label: '朋友', description: '知心聊天伙伴' },
+  { name: 'interviewer', label: '面试官', description: '模拟面试场景' },
+  { name: 'critic', label: '评论家', description: '专业评论分析' },
+  { name: 'coach', label: '健身教练', description: '健身指导建议' },
 ]
 
 export default function AIAssistant() {
@@ -165,7 +166,7 @@ export default function AIAssistant() {
     addMessage('ai_chat', {
       type: 'ai',
       from_user: '系统',
-      content: `🔄 已切换预设：${presetLabel}`,
+      content: `已切换预设：${presetLabel}`,
       timestamp: new Date().toLocaleString('zh-CN'),
       is_ai: false,
       is_own: false,
@@ -222,61 +223,62 @@ export default function AIAssistant() {
   }
 
   // 用户状态图标
-  const getStatusIcon = (userStatus: string) => {
+  const getStatusDotClass = (userStatus: string) => {
     switch (userStatus) {
-      case 'online': return '🟢'
-      case 'busy': return '🔴'
-      case 'away': return '🟡'
-      case 'offline': return '⚪'
+      case 'online': return 'status-dot status-dot-online'
+      case 'busy': return 'status-dot status-dot-busy'
+      case 'away': return 'status-dot status-dot-away'
+      case 'offline': return 'status-dot status-dot-offline'
+      default: return 'status-dot status-dot-offline'
     }
   }
 
   return (
-    <div className="h-screen flex bg-gray-100 dark:bg-gray-900">
+    <div className="chat-shell page-enter h-screen flex flex-col md:flex-row">
       {/* 左侧边栏 - AI 预设 */}
-      <div className="w-72 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+      <div className="chat-sidebar w-full md:w-80 lg:w-96 flex flex-col">
         {/* 标题栏 */}
-        <div className="h-14 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4">
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-white">🤖 AI 助手</h1>
+        <div className="chat-sidebar-header h-16 flex items-center justify-between px-5">
+          <h1 className="chat-title text-lg font-semibold icon-label"><Sparkles size={16} />AI 助手</h1>
         </div>
 
         {/* 当前预设 */}
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="chat-search-wrap p-4 border-b border-slate-200/70">
           <div className="relative">
             <button
               onClick={() => setShowPresetMenu(!showPresetMenu)}
-              className="w-full bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-3 text-left transition-colors"
+              className="w-full rounded-xl border border-cyan-200 bg-cyan-50/70 px-4 py-3 text-left transition-colors hover:bg-cyan-100/70"
             >
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">当前预设</p>
-              <p className="font-medium text-gray-900 dark:text-white">
-                {AI_PRESETS.find(p => p.name === selectedPreset)?.label || '🤝 朋友'}
+              <p className="text-xs text-slate-500 mb-1">当前预设</p>
+              <p className="font-medium text-slate-900">
+                {AI_PRESETS.find(p => p.name === selectedPreset)?.label || '朋友'}
               </p>
             </button>
 
             {/* 预设菜单 */}
             {showPresetMenu && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 max-h-64 overflow-y-auto">
+              <div className="chat-menu-panel absolute top-full left-0 right-0 mt-2 z-10 max-h-64 overflow-y-auto">
                 {AI_PRESETS.map((preset) => (
                   <button
                     key={preset.name}
                     onClick={() => handleSelectPreset(preset.name)}
-                    className={`w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
-                      selectedPreset === preset.name ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                    className={`w-full px-4 py-3 text-left transition-colors hover:bg-cyan-50/70 ${
+                      selectedPreset === preset.name ? 'bg-cyan-50/60' : ''
                     }`}
                   >
-                    <p className="font-medium text-gray-900 dark:text-white">{preset.label}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{preset.description}</p>
+                    <p className="font-medium text-slate-900">{preset.label}</p>
+                    <p className="text-xs text-slate-500">{preset.description}</p>
                   </button>
                 ))}
-                <div className="border-t border-gray-200 dark:border-gray-700">
+                <div className="border-t border-slate-200">
                   <button
                     onClick={() => {
                       setShowCreatePresetModal(true)
                       setShowPresetMenu(false)
                     }}
-                    className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-blue-600 dark:text-blue-400"
+                    className="w-full px-4 py-3 text-left transition-colors hover:bg-cyan-50/70 text-cyan-700"
                   >
-                    ➕ 创建自定义预设
+                    <span className="icon-label"><PlusCircle size={14} />创建自定义预设</span>
                   </button>
                 </div>
               </div>
@@ -285,10 +287,10 @@ export default function AIAssistant() {
         </div>
 
         {/* 预设说明 */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-            <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">💡 使用说明</h3>
-            <ul className="text-xs text-gray-600 dark:text-gray-300 space-y-1">
+        <div className="chat-friend-list flex-1 overflow-y-auto p-4">
+          <div className="rounded-xl border border-slate-200 bg-white/75 p-4 shadow-sm">
+            <h3 className="text-sm font-medium text-slate-900 mb-2 icon-label"><Lightbulb size={14} />使用说明</h3>
+            <ul className="text-xs text-slate-600 space-y-1">
               <li>• 选择不同的预设切换 AI 角色</li>
               <li>• 创建自定义预设定义专属 AI</li>
               <li>• 对话历史会保存在本地</li>
@@ -298,14 +300,14 @@ export default function AIAssistant() {
         </div>
 
         {/* 底部用户信息 */}
-        <div className="h-14 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 bg-gray-50 dark:bg-gray-800">
+        <div className="chat-userbar h-14 flex items-center justify-between px-4">
           <div className="flex items-center">
-            <span className="mr-2">{getStatusIcon(status)}</span>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{username}</span>
+            <span className={`mr-2 ${getStatusDotClass(status)}`} />
+            <span className="text-sm font-medium text-slate-700">{username}</span>
           </div>
           <button
             onClick={() => setShowLogoutConfirm(true)}
-            className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium"
+            className="text-sm text-rose-600 hover:text-rose-700 font-medium"
           >
             退出
           </button>
@@ -313,38 +315,38 @@ export default function AIAssistant() {
       </div>
 
       {/* 右侧聊天区域 */}
-      <div className="flex-1 flex flex-col">
+      <div className="chat-main flex-1 flex flex-col">
         {/* 顶部导航栏 */}
-        <div className="h-14 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6">
+        <div className="chat-topnav h-14 flex items-center justify-between px-6">
           <div className="flex items-center space-x-4">
-            <span className="text-lg font-semibold text-gray-900 dark:text-white">🤖 AI 助手</span>
+            <span className="topbar-title icon-label"><Sparkles size={16} />AI 助手</span>
             <nav className="flex items-center space-x-2">
               <Link
                 to="/"
-                className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                className="nav-pill"
                 title="私聊"
               >
-                💬 私聊
+                <span className="icon-label"><MessageSquare size={14} />私聊</span>
               </Link>
               <Link
                 to="/contact"
-                className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                className="nav-pill"
                 title="群聊"
               >
-                👥 群聊
+                <span className="icon-label"><Users size={14} />群聊</span>
               </Link>
               <Link
                 to="/settings"
-                className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                className="nav-pill"
                 title="设置"
               >
-                ⚙️ 设置
+                <span className="icon-label"><Settings size={14} />设置</span>
               </Link>
             </nav>
           </div>
           <div className="flex items-center space-x-2">
             <span className={`text-sm ${getStatusColor()}`}>
-              {getStatusIcon(status)}
+              <span className={`inline-block mr-1.5 align-middle ${getStatusDotClass(status)}`} />
               {status === 'online' ? '在线' :
                status === 'busy' ? '忙碌' :
                status === 'away' ? '离开' : '离线'}
@@ -353,75 +355,75 @@ export default function AIAssistant() {
         </div>
 
         {/* 聊天顶部栏 */}
-        <div className="h-14 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6">
+        <div className="chat-roombar h-14 flex items-center justify-between px-6">
           <div className="flex items-center">
-            <span className="text-xl mr-2">🤖</span>
-            <span className="font-semibold text-gray-900 dark:text-white">AI 助手</span>
-            <span className="ml-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-              {AI_PRESETS.find(p => p.name === selectedPreset)?.label || '🤝 朋友'}
+            <Bot size={18} className="mr-2 text-cyan-700" />
+            <span className="font-semibold text-slate-900">AI 助手</span>
+            <span className="ml-2 text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
+              {AI_PRESETS.find(p => p.name === selectedPreset)?.label || '朋友'}
             </span>
           </div>
 
           <div className="flex items-center space-x-2">
             <button
               onClick={handleClear}
-              className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+              className="action-chip"
               title="清空对话"
             >
-              🗑️ 清空
+              <span className="icon-label"><Trash2 size={14} />清空</span>
             </button>
             <button
               onClick={() => setShowContextModal(true)}
-              className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+              className="action-chip"
               title="上下文管理"
             >
-              📚 上下文
+              <span className="icon-label"><BookOpen size={14} />上下文</span>
             </button>
             <button
               onClick={() => setShowHistoryModal(true)}
-              className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+              className="action-chip"
               title="历史记录"
             >
-              📜 历史
+              <span className="icon-label"><History size={14} />历史</span>
             </button>
             <button
               onClick={() => setShowExportModal(true)}
-              className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+              className="action-chip"
               title="导出记录"
             >
-              📥 导出
+              <span className="icon-label"><Download size={14} />导出</span>
             </button>
           </div>
         </div>
 
         {/* 消息列表 */}
-        <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-6">
+        <div className="chat-thread flex-1 overflow-y-auto p-6">
           {aiMessages.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-gray-400">
+            <div className="h-full flex items-center justify-center text-slate-400">
               <div className="text-center max-w-md">
-                <span className="text-6xl mb-4 block">🤖</span>
-                <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                <Sparkles size={44} className="mx-auto mb-4 text-cyan-600" />
+                <h2 className="text-xl font-semibold text-slate-700 mb-2">
                   你好，我是你的 AI 助手
                 </h2>
-                <p className="text-gray-500 dark:text-gray-400 mb-6">
+                <p className="text-slate-500 mb-6">
                   我可以回答你的问题、帮助你编程、或者只是聊聊天
                 </p>
                 <div className="grid grid-cols-2 gap-3 text-left">
-                  <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
-                    <span className="text-lg">💡</span>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">解答各种问题</p>
+                  <div className="bg-white/90 p-3 rounded-lg shadow-sm">
+                    <Lightbulb size={17} className="text-amber-500" />
+                    <p className="text-sm text-slate-600 mt-1">解答各种问题</p>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
-                    <span className="text-lg">💻</span>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">编程技术支持</p>
+                  <div className="bg-white/90 p-3 rounded-lg shadow-sm">
+                    <Code2 size={17} className="text-indigo-500" />
+                    <p className="text-sm text-slate-600 mt-1">编程技术支持</p>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
-                    <span className="text-lg">📝</span>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">写作润色修改</p>
+                  <div className="bg-white/90 p-3 rounded-lg shadow-sm">
+                    <BookOpen size={17} className="text-emerald-600" />
+                    <p className="text-sm text-slate-600 mt-1">写作润色修改</p>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
-                    <span className="text-lg">🌐</span>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">翻译多国语言</p>
+                  <div className="bg-white/90 p-3 rounded-lg shadow-sm">
+                    <Globe2 size={17} className="text-sky-600" />
+                    <p className="text-sm text-slate-600 mt-1">翻译多国语言</p>
                   </div>
                 </div>
               </div>
@@ -434,21 +436,19 @@ export default function AIAssistant() {
                   className={`flex ${msg.is_own ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-2xl px-4 py-3 rounded-2xl ${
+                    className={`message-bubble msg-bubble ${
                       msg.is_own
-                        ? 'bg-blue-600 text-white rounded-br-none'
+                        ? 'msg-bubble-own'
                         : msg.is_ai
-                        ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-bl-none shadow border border-gray-100 dark:border-gray-700'
-                        : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-bl-none shadow'
+                        ? 'msg-bubble-other'
+                        : 'msg-bubble-other'
                     }`}
                   >
                     {!msg.is_own && msg.is_ai && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 flex items-center">
-                        <span className="mr-1">🤖</span> AI 助手
-                      </p>
+                      <p className="msg-sender"><Bot size={12} /><span>AI 助手</span></p>
                     )}
                     {msg.is_ai ? (
-                      <div className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
+                      <div className="text-sm text-slate-800 leading-relaxed">
                         <ReactMarkdown
                           remarkPlugins={[remarkBreaks]}
                           components={{
@@ -462,11 +462,11 @@ export default function AIAssistant() {
                             li: ({node, ...props}) => <li className="ml-2" {...props} />,
                             code: ({node, inline, ...props}: any) =>
                               inline ? (
-                                <code className="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded text-xs font-mono" {...props} />
+                                <code className="bg-slate-100 px-1 py-0.5 rounded text-xs font-mono" {...props} />
                               ) : (
-                                <code className="block bg-gray-100 dark:bg-gray-700 p-3 rounded my-2 text-xs font-mono overflow-x-auto" {...props} />
+                                <code className="block bg-slate-100 p-3 rounded my-2 text-xs font-mono overflow-x-auto" {...props} />
                               ),
-                            hr: ({node, ...props}) => <hr className="my-4 border-gray-300 dark:border-gray-600" {...props} />,
+                            hr: ({node, ...props}) => <hr className="my-4 border-slate-300" {...props} />,
                             strong: ({node, ...props}) => <strong className="font-bold" {...props} />,
                           }}
                         >
@@ -476,9 +476,9 @@ export default function AIAssistant() {
                     ) : (
                       <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                     )}
-                    <p className={`text-xs mt-1 ${msg.is_own ? 'text-blue-100' : 'text-gray-400'}`}>
-                      {msg.timestamp}
-                    </p>
+                    <div className={`msg-meta ${msg.is_own ? 'msg-meta-own' : 'msg-meta-other'}`}>
+                      <p>{msg.timestamp}</p>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -488,7 +488,7 @@ export default function AIAssistant() {
         </div>
 
         {/* 输入框 */}
-        <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
+        <div className="chat-composer p-4">
           <div className="flex items-end space-x-3">
             <textarea
               ref={inputRef}
@@ -497,13 +497,13 @@ export default function AIAssistant() {
               onKeyDown={handleKeyDown}
               placeholder="向 AI 提问... (Enter 发送，Shift+Enter 换行)"
               rows={1}
-              className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              className="flex-1 resize-none rounded-xl border border-white/60 bg-white/85 px-4 py-3 text-slate-900 shadow-sm outline-none transition-all focus:border-cyan-400 focus:bg-white focus:ring-2 focus:ring-cyan-200"
               style={{ minHeight: '48px', maxHeight: '120px' }}
             />
             <button
               onClick={handleSendMessage}
               disabled={!inputMessage.trim() || connectionStatus !== 'connected'}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium rounded-xl transition-colors"
+              className="rounded-xl bg-gradient-to-r from-cyan-600 to-sky-600 px-6 py-3 font-medium text-white transition-all hover:from-cyan-500 hover:to-sky-500 disabled:cursor-not-allowed disabled:from-slate-400 disabled:to-slate-400"
             >
               发送
             </button>
@@ -513,12 +513,12 @@ export default function AIAssistant() {
 
       {/* 创建预设模态框 */}
       {showCreatePresetModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">➕ 创建自定义预设</h3>
+        <div className="modal-overlay">
+          <div className="modal-card max-w-md">
+            <h3 className="modal-title icon-label"><PlusCircle size={18} />创建自定义预设</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="modal-label">
                   预设名称
                 </label>
                 <input
@@ -526,12 +526,12 @@ export default function AIAssistant() {
                   value={newPresetName}
                   onChange={(e) => setNewPresetName(e.target.value)}
                   placeholder="例如：翻译助手"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="modal-input"
                   autoFocus
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="modal-label">
                   预设描述（可选）
                 </label>
                 <input
@@ -539,7 +539,7 @@ export default function AIAssistant() {
                   value={newPresetDescription}
                   onChange={(e) => setNewPresetDescription(e.target.value)}
                   placeholder="例如：专业翻译多国语言"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="modal-input"
                 />
               </div>
               <div className="flex justify-end space-x-3">
@@ -549,14 +549,14 @@ export default function AIAssistant() {
                     setNewPresetName('')
                     setNewPresetDescription('')
                   }}
-                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  className="modal-btn modal-btn-ghost"
                 >
                   取消
                 </button>
                 <button
                   onClick={handleCreatePreset}
                   disabled={!newPresetName.trim()}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
+                  className="modal-btn modal-btn-primary disabled:cursor-not-allowed disabled:opacity-55"
                 >
                   创建
                 </button>
@@ -588,20 +588,20 @@ export default function AIAssistant() {
 
       {/* 登出确认对话框 */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-sm">
-            <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">确认退出</h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">确定要退出登录吗？</p>
+        <div className="modal-overlay">
+          <div className="modal-card max-w-sm">
+            <h3 className="modal-title mb-2">确认退出</h3>
+            <p className="text-slate-600 mb-6">确定要退出登录吗？</p>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setShowLogoutConfirm(false)}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className="modal-btn modal-btn-ghost"
               >
                 取消
               </button>
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                className="modal-btn modal-btn-danger"
               >
                 退出
               </button>

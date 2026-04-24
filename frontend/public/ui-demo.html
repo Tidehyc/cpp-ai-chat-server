@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat UI Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-a: #f8fbff;
+      --bg-b: #eef9ff;
+      --bg-c: #fff8ef;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --line: rgba(148, 163, 184, 0.28);
+      --accent-a: #0891b2;
+      --accent-b: #2563eb;
+      --accent-c: #f97316;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 8% 12%, rgba(14, 165, 233, 0.22), transparent 38%),
+        radial-gradient(circle at 92% 10%, rgba(251, 146, 60, 0.20), transparent 34%),
+        linear-gradient(140deg, var(--bg-a), var(--bg-b) 55%, var(--bg-c));
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .frame {
+      width: min(1200px, 100%);
+      height: min(760px, calc(100vh - 40px));
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 18px 55px rgba(15, 23, 42, 0.14);
+      position: relative;
+    }
+
+    .frame::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(15, 23, 42, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(15, 23, 42, 0.025) 1px, transparent 1px);
+      background-size: 22px 22px;
+      opacity: 0.5;
+    }
+
+    .sidebar {
+      z-index: 1;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.62));
+      border-right: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .main {
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      background: linear-gradient(160deg, rgba(255, 255, 255, 0.58), rgba(240, 249, 255, 0.72));
+    }
+
+    .bar {
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.7);
+    }
+
+    .logo {
+      font-family: "Space Grotesk", sans-serif;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      background: linear-gradient(90deg, #0f172a, #0e7490 54%, #0284c7);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      font-size: 20px;
+    }
+
+    .plus {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.55);
+      background: rgba(255, 255, 255, 0.7);
+      cursor: pointer;
+      transition: transform .2s ease, background .2s ease;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .plus:hover {
+      transform: translateY(-2px);
+      background: rgba(255,255,255,0.92);
+    }
+
+    .search-wrap {
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .search {
+      width: 100%;
+      border: 1px solid rgba(255, 255, 255, 0.62);
+      border-radius: 12px;
+      padding: 11px 12px;
+      background: rgba(255, 255, 255, 0.75);
+      font-size: 14px;
+      outline: none;
+    }
+
+    .search:focus {
+      border-color: rgba(14, 165, 233, 0.6);
+      box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.12);
+      background: #fff;
+    }
+
+    .friend-list {
+      overflow: auto;
+      padding: 8px;
+      flex: 1;
+    }
+
+    .friend {
+      border-radius: 12px;
+      padding: 11px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: background .2s ease, transform .2s ease;
+      margin-bottom: 4px;
+      border-right: 3px solid transparent;
+    }
+
+    .friend:hover {
+      background: rgba(255,255,255,0.72);
+      transform: translateX(2px);
+    }
+
+    .friend.active {
+      background: rgba(34, 211, 238, 0.14);
+      border-right-color: #0891b2;
+    }
+
+    .friend .name { font-size: 14px; font-weight: 600; }
+    .friend .meta { font-size: 12px; color: var(--muted); }
+    .badge {
+      margin-left: auto;
+      min-width: 20px;
+      height: 20px;
+      border-radius: 99px;
+      background: #ef4444;
+      color: #fff;
+      font-size: 11px;
+      display: grid;
+      place-items: center;
+      padding: 0 6px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+    }
+
+    .tab {
+      border-radius: 10px;
+      padding: 7px 11px;
+      font-size: 13px;
+      color: #475569;
+      cursor: pointer;
+      transition: background .2s ease;
+    }
+
+    .tab:hover { background: rgba(14, 165, 233, 0.1); }
+
+    .room-bar {
+      height: 56px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      background: rgba(255,255,255,0.55);
+      font-size: 14px;
+    }
+
+    .status {
+      color: #0e7490;
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .messages {
+      flex: 1;
+      overflow: auto;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background:
+        radial-gradient(circle at 84% 14%, rgba(34, 211, 238, 0.12), transparent 30%),
+        radial-gradient(circle at 16% 82%, rgba(251, 146, 60, 0.1), transparent 24%);
+    }
+
+    .msg {
+      max-width: min(74%, 580px);
+      padding: 10px 12px;
+      border-radius: 15px;
+      animation: rise .25s ease both;
+    }
+
+    .msg.in {
+      align-self: flex-start;
+      background: rgba(255,255,255,0.92);
+      color: #0f172a;
+      border-bottom-left-radius: 4px;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+    }
+
+    .msg.out {
+      align-self: flex-end;
+      color: #fff;
+      background: linear-gradient(135deg, var(--accent-a), var(--accent-b));
+      border-bottom-right-radius: 4px;
+      box-shadow: 0 8px 20px rgba(14, 116, 144, 0.24);
+    }
+
+    .meta-line {
+      margin-top: 6px;
+      font-size: 11px;
+      opacity: .75;
+      text-align: right;
+    }
+
+    .composer {
+      border-top: 1px solid var(--line);
+      background: rgba(255,255,255,0.74);
+      padding: 12px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .input {
+      flex: 1;
+      border: 1px solid rgba(255,255,255,0.68);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.82);
+      padding: 10px 12px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .input:focus {
+      border-color: rgba(37, 99, 235, .5);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+      background: #fff;
+    }
+
+    .send {
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-weight: 600;
+      background: linear-gradient(90deg, var(--accent-a), var(--accent-b));
+      padding: 0 18px;
+      cursor: pointer;
+      transition: transform .2s ease, filter .2s ease;
+    }
+
+    .send:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.03);
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 900px) {
+      .frame {
+        grid-template-columns: 1fr;
+        height: auto;
+        min-height: calc(100vh - 40px);
+      }
+      .sidebar {
+        border-right: none;
+        border-bottom: 1px solid var(--line);
+      }
+      .messages { min-height: 360px; }
+      .msg { max-width: 88%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <aside class="sidebar">
+      <div class="bar">
+        <div class="logo">FLOW CHAT</div>
+        <button class="plus" aria-label="add">+</button>
+      </div>
+      <div class="search-wrap">
+        <input class="search" placeholder="搜索好友 / 聊天记录" />
+      </div>
+      <div class="friend-list">
+        <div class="friend active">
+          <span>🟢</span>
+          <div>
+            <div class="name">Tide</div>
+            <div class="meta">在线 · 正在输入...</div>
+          </div>
+          <div class="badge">3</div>
+        </div>
+        <div class="friend">
+          <span>🤖</span>
+          <div>
+            <div class="name">AI 助手</div>
+            <div class="meta">刚刚回复你</div>
+          </div>
+        </div>
+        <div class="friend">
+          <span>🟡</span>
+          <div>
+            <div class="name">设计组</div>
+            <div class="meta">离开 · 10 分钟前</div>
+          </div>
+        </div>
+        <div class="friend">
+          <span>⚪</span>
+          <div>
+            <div class="name">后端组</div>
+            <div class="meta">离线 · 昨天</div>
+          </div>
+        </div>
+      </div>
+      <div class="bar" style="height: 54px; border-top: 1px solid var(--line); border-bottom: none;">
+        <div style="font-size: 14px; color: #334155;">👤 tide · 在线</div>
+        <div style="font-size: 13px; color: #e11d48; font-weight: 600;">退出</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="bar" style="height: 58px;">
+        <div style="display:flex; align-items:center; gap: 12px;">
+          <strong style="font-size: 16px;">私聊</strong>
+          <div class="tabs">
+            <div class="tab">👥 群聊</div>
+            <div class="tab">🤖 AI</div>
+            <div class="tab">⚙️ 设置</div>
+          </div>
+        </div>
+        <div style="font-size: 13px; color: #0e7490; font-weight: 600;">已连接</div>
+      </div>
+
+      <div class="room-bar">
+        <div>💬 与 <strong>Tide</strong> 的对话</div>
+        <div class="status">🟢 在线</div>
+      </div>
+
+      <section class="messages" id="messages">
+        <div class="msg in">
+          新风格这版层次更清楚，移动端也更稳。
+          <div class="meta-line">14:48</div>
+        </div>
+        <div class="msg out">
+          我想要更有设计感，但不能花里胡哨。
+          <div class="meta-line">14:49 · ✓✓</div>
+        </div>
+        <div class="msg in">
+          收到，这个 demo 是偏“清爽科技感”的方向。我们可以再做一版更商务极简对比。
+          <div class="meta-line">14:50</div>
+        </div>
+      </section>
+
+      <div class="composer">
+        <input id="input" class="input" placeholder="输入消息，按 Enter 发送（Demo）" />
+        <button id="send" class="send">发送</button>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const input = document.getElementById('input');
+    const send = document.getElementById('send');
+    const messages = document.getElementById('messages');
+
+    function append(content, type) {
+      const el = document.createElement('div');
+      el.className = `msg ${type}`;
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      el.innerHTML = `${content}<div class="meta-line">${hh}:${mm}${type === 'out' ? ' · ✓' : ''}</div>`;
+      messages.appendChild(el);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function submit() {
+      const text = input.value.trim();
+      if (!text) return;
+      append(text, 'out');
+      input.value = '';
+      setTimeout(() => append('Demo 自动回复：这个交互节奏可以。', 'in'), 500);
+    }
+
+    send.addEventListener('click', submit);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submit();
+    });
+  </script>
+</body>
+</html>

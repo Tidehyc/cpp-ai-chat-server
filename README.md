@@ -1,10 +1,20 @@
-# C++ AI Chat Server v1.1.1
+# C++ AI Chat Server v1.1.2
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![C++](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://isocpp.org/)
 [![Docker](https://img.shields.io/badge/docker-ready-green.svg)](https://www.docker.com/)
 
 **高性能 C++ AI 聊天服务器**，集成 AI 助手，支持 AI 预设、多轮对话上下文、好友系统与私聊功能、离线消息推送。
+
+---
+
+## 🆕 最近更新（v1.1.2）
+
+- 启用 `main` 分支保护：禁止直推，必须通过 PR 合并
+- 配置 required check：`backend-checks`（合并前必过）
+- 上线后端检查工作流：`.github/workflows/backend-checks.yml`
+- 新增统一后端检查入口：`scripts/run_backend_checks.sh`
+- 新增性能趋势汇总：`scripts/summarize_perf_reports.py`
 
 ---
 
@@ -447,8 +457,8 @@ npm run dev
 
 ---
 
-_版本：v1.1.1_
+_版本：v1.1.2_
 _创建日期：2026-03-27_
-_最后更新：2026-04-04_
+_最后更新：2026-04-23_
 
 **🎉 感谢使用 C++ AI Chat Server！**

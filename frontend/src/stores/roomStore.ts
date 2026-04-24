@@ -3,21 +3,21 @@ import type { Room, GroupRoom } from '../types'
 
 // 内置 AI 房间配置
 export const DEFAULT_AI_ROOMS: Room[] = [
-  { id: 1, name: '#general', ai_prompt: 'friendly', description: '友好助手', icon: '🏠' },
-  { id: 2, name: '#code', ai_prompt: 'coder', description: '编程助手', icon: '💻' },
-  { id: 3, name: '#translate', ai_prompt: 'translator', description: '翻译', icon: '🌐' },
-  { id: 4, name: '#learn', ai_prompt: 'teacher', description: '学习辅导', icon: '📚' },
-  { id: 5, name: '#write', ai_prompt: 'writer', description: '写作助手', icon: '✍️' },
-  { id: 6, name: '#debug', ai_prompt: 'debugger', description: '调试专家', icon: '🔧' },
+  { id: 1, name: '#general', ai_prompt: 'friendly', description: '友好助手', icon: 'general' },
+  { id: 2, name: '#code', ai_prompt: 'coder', description: '编程助手', icon: 'code' },
+  { id: 3, name: '#translate', ai_prompt: 'translator', description: '翻译', icon: 'translate' },
+  { id: 4, name: '#learn', ai_prompt: 'teacher', description: '学习辅导', icon: 'learn' },
+  { id: 5, name: '#write', ai_prompt: 'writer', description: '写作助手', icon: 'write' },
+  { id: 6, name: '#debug', ai_prompt: 'debugger', description: '调试专家', icon: 'debug' },
 ]
 
 // 内置群聊房间配置
 export const DEFAULT_GROUP_ROOMS: GroupRoom[] = [
-  { name: '#general', description: '综合交流群', icon: '🏠', members: [], isJoined: false },
-  { name: '#code', description: '编程技术讨论', icon: '💻', members: [], isJoined: false },
-  { name: '#gaming', description: '游戏交流', icon: '🎮', members: [], isJoined: false },
-  { name: '#music', description: '音乐分享', icon: '🎵', members: [], isJoined: false },
-  { name: '#movie', description: '电影推荐', icon: '🎬', members: [], isJoined: false },
+  { name: '#general', description: '综合交流群', icon: 'general', members: [], isJoined: false },
+  { name: '#code', description: '编程技术讨论', icon: 'code', members: [], isJoined: false },
+  { name: '#gaming', description: '游戏交流', icon: 'gaming', members: [], isJoined: false },
+  { name: '#music', description: '音乐分享', icon: 'music', members: [], isJoined: false },
+  { name: '#movie', description: '电影推荐', icon: 'movie', members: [], isJoined: false },
 ]
 
 interface RoomState {

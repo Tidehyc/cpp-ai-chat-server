@@ -25,6 +25,7 @@ export interface Message {
   is_history?: boolean
   is_own?: boolean
   is_error?: boolean
+  is_read?: boolean  // 消息是否已读
 }
 
 // 聊天房间（AI 房间）

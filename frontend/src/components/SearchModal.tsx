@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Search, X } from 'lucide-react'
 import { wsService } from '../services/websocket'
 import type { Message } from '../types'
 
@@ -89,12 +90,12 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
       <div className="bg-white rounded-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
         {/* 标题 */}
         <div className="h-14 border-b border-gray-200 flex items-center justify-between px-6">
-          <h3 className="text-lg font-semibold">🔍 搜索消息</h3>
+          <h3 className="text-lg font-semibold icon-label"><Search size={17} />搜索消息</h3>
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            ✕
+            <X size={16} />
           </button>
         </div>
 
@@ -186,7 +187,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
         <div className="flex-1 overflow-y-auto p-6">
           {!searched ? (
             <div className="text-center py-12 text-gray-400">
-              <span className="text-4xl mb-4 block">🔍</span>
+              <Search size={32} className="mx-auto mb-4 text-slate-300" />
               <p>输入关键词开始搜索</p>
             </div>
           ) : loading ? (
@@ -212,7 +213,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
             </div>
           ) : (
             <div className="text-center py-12 text-gray-400">
-              <span className="text-4xl mb-4 block">📭</span>
+              <Search size={32} className="mx-auto mb-4 text-slate-300" />
               <p>没有找到相关消息</p>
             </div>
           )}

@@ -63,7 +63,7 @@ class WebSocketService {
         this.ws = new WebSocket(this.config.url)
 
         this.ws.onopen = () => {
-          console.log('[WS] ✅ Connected')
+          console.log('[WS] Connected')
           this.reconnectAttempts = 0
           this.updateConnectionStatus('connected')
           this.startHeartbeat()
@@ -73,7 +73,7 @@ class WebSocketService {
         }
 
         this.ws.onerror = (error) => {
-          console.error('[WS] ❌ Error:', error)
+          console.error('[WS] Error:', error)
           this.updateConnectionStatus('disconnected')
           this.connectPromise = null
           reject(new Error('WebSocket 连接失败，请确保后端服务正在运行'))
@@ -398,7 +398,7 @@ class WebSocketService {
   private attemptReconnect(): void {
     if (this.reconnectAttempts < this.config.maxReconnectAttempts) {
       this.reconnectAttempts++
-      console.log(`[WS] 🔄 Reconnecting... (${this.reconnectAttempts}/${this.config.maxReconnectAttempts})`)
+      console.log(`[WS] Reconnecting... (${this.reconnectAttempts}/${this.config.maxReconnectAttempts})`)
       
       this.stopReconnect()
       this.reconnectTimer = setTimeout(() => {
@@ -406,7 +406,7 @@ class WebSocketService {
         this.connect()
       }, this.config.reconnectDelay)
     } else {
-      console.error('[WS] ❌ Max reconnect attempts reached')
+      console.error('[WS] Max reconnect attempts reached')
     }
   }
 
@@ -471,14 +471,15 @@ class WebSocketService {
    */
   private parseJSONMessage(data: any): any {
     const type = this.determineMessageType(data)
-    
+
     return {
       type,
       from_user: data.from || data.from_user || 'system',
       to_user: data.to || data.to_user,
       room: data.room || data.room_name,
       content: data.content,
-      timestamp: data.timestamp 
+      is_read: data.is_read,
+      timestamp: data.timestamp
         ? new Date(data.timestamp * 1000).toLocaleString('zh-CN')
         : new Date().toLocaleString('zh-CN'),
       is_ai: type === 'ai_response',
@@ -512,6 +513,15 @@ class WebSocketService {
     if (data.type === 'friend_list') {
       return 'friend_list'
     }
+    if (data.type === 'read_confirm') {
+      return 'read_confirm'
+    }
+    if (data.type === 'read_notify') {
+      return 'read_notify'
+    }
+    if (data.type === 'unread_count') {
+      return 'unread_count'
+    }
 
     const content = data.content || ''
     const from = data.from || data.from_user || ''
@@ -539,7 +549,8 @@ class WebSocketService {
     }
 
     // 系统消息
-    if (from === 'system' || from === 'Server' || content.startsWith('📢')) {
+    const hasBroadcastPrefix = /^\p{Extended_Pictographic}/u.test(content)
+    if (from === 'system' || from === 'Server' || hasBroadcastPrefix) {
       return 'system'
     }
 

@@ -27,6 +27,7 @@ interface MessageState {
   incrementUnread: (target: string) => void
   clearUnread: (target: string) => void
   clearAllUnread: () => void
+  markMessagesRead: (target: string) => void
 }
 
 export const useMessageStore = create<MessageState>((set, get) => ({
@@ -114,4 +115,22 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
   // 清除所有未读消息数
   clearAllUnread: () => set({ unreadCounts: new Map() }),
+
+  // 标记指定用户的消息为已读
+  markMessagesRead: (target: string) => set((state) => {
+    const messages = state.messages.get(target) || []
+    let hasChanges = false
+    const newMessages = messages.map(msg => {
+      if (msg.is_own && !msg.is_read) {
+        hasChanges = true
+        return { ...msg, is_read: true }
+      }
+      return msg
+    })
+    
+    if (!hasChanges) return state
+    
+    const newMap = new Map(state.messages).set(target, newMessages)
+    return { messages: newMap }
+  }),
 }))

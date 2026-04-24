@@ -10,19 +10,20 @@ export default function ChatList({ selectedFriend, onSelectFriend }: ChatListPro
   const { friends, getFilteredFriends } = useFriendStore()
   const filteredFriends = getFilteredFriends()
 
-  const getStatusIcon = (status: Friend['status']) => {
+  const getStatusClass = (status: Friend['status']) => {
     switch (status) {
-      case 'online': return '🟢'
-      case 'busy': return '🔴'
-      case 'away': return '🟡'
-      case 'offline': return '⚪'
+      case 'online': return 'status-dot status-dot-online'
+      case 'busy': return 'status-dot status-dot-busy'
+      case 'away': return 'status-dot status-dot-away'
+      case 'offline': return 'status-dot status-dot-offline'
+      default: return 'status-dot status-dot-offline'
     }
   }
 
   if (filteredFriends.length === 0) {
     return (
       <div className="p-4 text-center text-gray-500 text-sm">
-        {friends.length === 0 ? '暂无好友，点击 ➕ 添加' : '没有找到匹配的好友'}
+        {friends.length === 0 ? '暂无好友，点击右上角添加' : '没有找到匹配的好友'}
       </div>
     )
   }
@@ -37,7 +38,7 @@ export default function ChatList({ selectedFriend, onSelectFriend }: ChatListPro
             selectedFriend === friend.username ? 'bg-blue-50 border-r-4 border-blue-500' : ''
           }`}
         >
-          <span className="mr-3">{getStatusIcon(friend.status)}</span>
+          <span className={`mr-3 ${getStatusClass(friend.status)}`} />
           <div className="flex-1 text-left">
             <p className="text-sm font-medium text-gray-900">{friend.username}</p>
             <p className="text-xs text-gray-500">

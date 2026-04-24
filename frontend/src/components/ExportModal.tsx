@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Braces, CheckCircle2, Download, FileText } from 'lucide-react'
 import { wsService } from '../services/websocket'
 import { useMessageStore } from '../stores/messageStore'
 import type { Message } from '../types'
@@ -76,11 +77,11 @@ export default function ExportModal({ isOpen, onClose, target }: ExportModalProp
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl p-6 w-full max-w-md">
-        <h3 className="text-lg font-semibold mb-4">📥 导出聊天记录</h3>
+        <h3 className="text-lg font-semibold mb-4 icon-label"><Download size={17} />导出聊天记录</h3>
 
         {exported ? (
           <div className="text-center py-8">
-            <span className="text-5xl mb-4 block">✅</span>
+            <CheckCircle2 size={40} className="mx-auto mb-4 text-emerald-500" />
             <p className="text-green-600 font-medium">导出成功！</p>
             <p className="text-sm text-gray-500 mt-2">聊天记录已保存到本地</p>
           </div>
@@ -116,7 +117,7 @@ export default function ExportModal({ isOpen, onClose, target }: ExportModalProp
                       : 'border-gray-200 hover:border-gray-300'
                   }`}>
                     <div className="text-center">
-                      <span className="text-2xl">📄</span>
+                      <FileText size={20} className="mx-auto text-sky-600" />
                       <p className="text-sm font-medium mt-2">TXT 文本</p>
                       <p className="text-xs text-gray-500 mt-1">纯文本格式</p>
                     </div>
@@ -137,7 +138,7 @@ export default function ExportModal({ isOpen, onClose, target }: ExportModalProp
                       : 'border-gray-200 hover:border-gray-300'
                   }`}>
                     <div className="text-center">
-                      <span className="text-2xl">📋</span>
+                      <Braces size={20} className="mx-auto text-violet-600" />
                       <p className="text-sm font-medium mt-2">JSON</p>
                       <p className="text-xs text-gray-500 mt-1">结构化数据</p>
                     </div>

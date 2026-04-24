@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { BookOpen, Trash2 } from 'lucide-react'
 import { wsService } from '../services/websocket'
 
 interface ContextModalProps {
@@ -54,7 +55,7 @@ export default function ContextModal({ isOpen, onClose }: ContextModalProps) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl p-6 w-full max-w-md">
-        <h3 className="text-lg font-semibold mb-4">📚 上下文管理</h3>
+        <h3 className="text-lg font-semibold mb-4 icon-label"><BookOpen size={17} />上下文管理</h3>
         
         <div className="space-y-4">
           {/* 当前上下文大小 */}
@@ -95,7 +96,7 @@ export default function ContextModal({ isOpen, onClose }: ContextModalProps) {
               onClick={handleClear}
               className="w-full bg-red-50 hover:bg-red-100 text-red-600 font-medium py-2 px-4 rounded-lg transition-colors"
             >
-              🗑️ 清空对话历史
+              <span className="icon-label justify-center"><Trash2 size={15} />清空对话历史</span>
             </button>
           </div>
         </div>

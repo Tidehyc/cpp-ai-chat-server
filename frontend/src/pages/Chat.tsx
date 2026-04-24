@@ -5,6 +5,7 @@ import { useFriendStore } from '../stores/friendStore'
 import { useMessageStore } from '../stores/messageStore'
 import { useRoomStore } from '../stores/roomStore'
 import { wsService } from '../services/websocket'
+import { ArrowLeft, Bot, Check, CheckCheck, CheckCircle2, CircleAlert, CircleX, Download, History, Mail, MessageSquare, Plus, Settings, Trash2, User, UserPlus, Users, X } from 'lucide-react'
 import type { ConnectionStatus } from '../types'
 import type { FriendRequest } from '../types/friend'
 
@@ -94,6 +95,7 @@ export default function Chat() {
   const handlePrivateMessage = useCallback((message: any) => {
     const fromUser = message.from_user || message.from
     const content = message.content
+    const isRead = message.is_read || false
 
     addMessage(fromUser, {
       type: 'private',
@@ -102,12 +104,58 @@ export default function Chat() {
       content,
       timestamp: message.timestamp || new Date().toLocaleString('zh-CN'),
       is_own: false,
+      is_read: isRead,
     }, false)
+
+    // 如果当前正在与该用户聊天，标记消息为已读（使用防抖）
+    if (selectedFriendRef.current === fromUser) {
+      // 延迟 100ms 发送，避免频繁调用
+      setTimeout(() => {
+        // 再次检查当前是否仍在与该用户聊天
+        if (selectedFriendRef.current === fromUser) {
+          wsService.sendCommand(`/read ${fromUser}`)
+        }
+      }, 100)
+    }
   }, [addMessage, username])
 
   // 处理发送的消息
-  const handleSentMessage = useCallback((_message: any) => {
-    // 自己的消息已经在 UI 上显示，无需额外处理
+  const handleSentMessage = useCallback((message: any) => {
+    // 更新自己发送的消息的已读状态
+    const toUser = message.to
+    if (toUser) {
+      const messages = useMessageStore.getState().getMessages(toUser)
+      const updatedMessages = messages.map(msg => {
+        if (msg.is_own && msg.content === message.content) {
+          return { ...msg, is_read: true }
+        }
+        return msg
+      })
+      useMessageStore.getState().clearMessages(toUser)
+      updatedMessages.forEach(msg => {
+        useMessageStore.getState().addMessage(toUser, msg, msg.is_own)
+      })
+    }
+  }, [])
+
+  // 处理已读确认
+  const handleReadConfirm = useCallback((message: any) => {
+    const fromUser = message.from_user || message.raw?.from
+    console.log(`[Chat] Messages from ${fromUser} marked as read`)
+    
+    if (fromUser) {
+      useMessageStore.getState().markMessagesRead(fromUser)
+    }
+  }, [])
+
+  // 处理已读通知（对方读了你的消息）
+  const handleReadNotify = useCallback((message: any) => {
+    const reader = message.from_user || message.raw?.from
+    console.log(`[Chat] ${reader} read your messages`)
+    
+    if (reader) {
+      useMessageStore.getState().markMessagesRead(reader)
+    }
   }, [])
 
   // 处理系统消息
@@ -143,9 +191,10 @@ export default function Chat() {
       return
     }
 
-    // 好友请求通知 - 匹配 "📬 {username} 向你发送了好友请求"
+    // 好友请求通知 - 兼容有无前缀图标的文案
     if (content.includes('向你发送了好友请求')) {
-      const match = content.match(/📬 (\S+) 向你发送了好友请求/)
+      const normalizedContent = content.replace(/^[^\p{L}\p{N}]+\s*/u, '')
+      const match = normalizedContent.match(/(\S+) 向你发送了好友请求/)
       if (match) {
         const senderUsername = match[1]
         console.log('[Chat] Received friend request from:', senderUsername)
@@ -177,7 +226,7 @@ export default function Chat() {
         type: 'system',
         from_user: '系统',
         to_user: username || undefined,
-        content: '❌ 发送失败：' + content,
+        content: '发送失败：' + content,
         timestamp: new Date().toLocaleString('zh-CN'),
         is_own: false,
         is_error: true,
@@ -269,6 +318,8 @@ export default function Chat() {
     wsService.on('private_message', handlePrivateMessage)
     wsService.on('sent_message', handleSentMessage)
     wsService.on('system', handleSystemMessage)
+    wsService.on('read_confirm', handleReadConfirm)
+    wsService.on('read_notify', handleReadNotify)
     wsService.on('friend_online', (msg) => handleFriendOnlineRef.current(msg))
     wsService.on('friend_offline', (msg) => handleFriendOfflineRef.current(msg))
 
@@ -282,6 +333,8 @@ export default function Chat() {
       wsService.off('private_message', handlePrivateMessage)
       wsService.off('sent_message', handleSentMessage)
       wsService.off('system', handleSystemMessage)
+      wsService.off('read_confirm', handleReadConfirm)
+      wsService.off('read_notify', handleReadNotify)
     }
   }, [])
 
@@ -343,6 +396,9 @@ export default function Chat() {
     setSelectedFriend(friendUsername)
     setCurrentChatTarget(friendUsername, 'private')
     setCurrentRoom(null) // 离开群聊房间
+
+    // 标记消息为已读
+    wsService.sendCommand(`/read ${friendUsername}`)
   }
 
   // 添加好友
@@ -375,23 +431,23 @@ export default function Chat() {
   }
 
   // 用户状态图标
-  const getStatusIcon = (userStatus: string) => {
+  const getStatusDotClass = (userStatus: string) => {
     switch (userStatus) {
-      case 'online': return '🟢'
-      case 'busy': return '🔴'
-      case 'away': return '🟡'
-      case 'offline': return '⚪'
-      default: return '⚪'
+      case 'online': return 'status-dot status-dot-online'
+      case 'busy': return 'status-dot status-dot-busy'
+      case 'away': return 'status-dot status-dot-away'
+      case 'offline': return 'status-dot status-dot-offline'
+      default: return 'status-dot status-dot-offline'
     }
   }
 
   return (
-    <div className="h-screen flex bg-gray-100 dark:bg-gray-900">
+    <div className="chat-shell page-enter h-screen flex flex-col md:flex-row">
       {/* 左侧边栏 - 好友列表 */}
-      <div className="w-72 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+      <div className="chat-sidebar w-full md:w-80 lg:w-96 flex flex-col">
         {/* 标题栏 */}
-        <div className="h-14 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4">
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-white">💬 好友聊天</h1>
+        <div className="chat-sidebar-header h-16 flex items-center justify-between px-5">
+          <h1 className="chat-title text-lg font-semibold">好友聊天</h1>
           <button
             onClick={() => {
               setShowFriendRequestModal(true)
@@ -399,37 +455,37 @@ export default function Chat() {
               setFriendRequestMessage('')
               setNewFriendUsername('')
             }}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="h-10 w-10 rounded-xl border border-white/40 bg-white/50 text-lg transition-all hover:-translate-y-0.5 hover:bg-white/80"
             title="添加好友"
           >
-            <span className="text-xl">➕</span>
+              <Plus size={18} strokeWidth={2.2} />
           </button>
         </div>
 
         {/* 待处理好友请求 */}
         {pendingRequests.length > 0 && (
-          <div className="border-b border-gray-200 dark:border-gray-700 bg-yellow-50 dark:bg-yellow-900/20 p-3">
-            <div className="flex items-center text-yellow-800 dark:text-yellow-400 font-medium mb-2">
-              <span>📬</span>
+          <div className="border-b border-white/30 bg-amber-50/80 p-3 backdrop-blur-sm">
+            <div className="mb-2 flex items-center font-medium text-amber-900">
+              <Mail size={15} />
               <span className="ml-2">待处理好友请求 ({pendingRequests.length})</span>
             </div>
             {pendingRequests.map((request) => (
-              <div key={request.id} className="bg-white dark:bg-gray-800 rounded-lg p-2 mb-2 border border-yellow-200 dark:border-yellow-800">
-                <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+              <div key={request.id} className="mb-2 rounded-xl border border-amber-200 bg-white/90 p-2 shadow-sm">
+                <p className="mb-2 text-sm text-slate-700">
                   <span className="font-medium">{request.senderUsername}</span> 请求添加你为好友
                 </p>
                 <div className="flex space-x-2">
                   <button
                     onClick={() => handleAcceptRequest(request.senderUsername)}
-                    className="flex-1 bg-green-500 hover:bg-green-600 text-white text-sm py-1 px-3 rounded transition-colors"
+                    className="flex-1 rounded-lg bg-emerald-600 px-3 py-1 text-sm text-white transition-colors hover:bg-emerald-700"
                   >
-                    ✓ 同意
+                    <span className="icon-label justify-center"><Check size={14} />同意</span>
                   </button>
                   <button
                     onClick={() => handleRejectRequest(request.senderUsername)}
-                    className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm py-1 px-3 rounded transition-colors"
+                    className="flex-1 rounded-lg bg-rose-600 px-3 py-1 text-sm text-white transition-colors hover:bg-rose-700"
                   >
-                    ✕ 拒绝
+                    <span className="icon-label justify-center"><X size={14} />拒绝</span>
                   </button>
                 </div>
               </div>
@@ -438,21 +494,21 @@ export default function Chat() {
         )}
 
         {/* 搜索框 */}
-        <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="chat-search-wrap p-3">
           <input
             type="text"
-            placeholder="🔍 搜索好友..."
+            placeholder="搜索好友..."
             value={useFriendStore((state) => state.searchQuery)}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full rounded-xl border border-white/50 bg-white/70 px-4 py-2.5 text-sm text-slate-800 shadow-sm outline-none transition-all focus:border-cyan-400 focus:bg-white focus:ring-2 focus:ring-cyan-200"
           />
         </div>
 
         {/* 好友列表 */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="chat-friend-list flex-1 overflow-y-auto">
           {filteredFriends.length === 0 ? (
-            <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
-              {friends.length === 0 ? '暂无好友，点击 ➕ 添加' : '没有找到匹配的好友'}
+            <div className="p-4 text-center text-slate-500 text-sm">
+              {friends.length === 0 ? '暂无好友，点击右上角添加' : '没有找到匹配的好友'}
             </div>
           ) : (
             filteredFriends.map((friend) => {
@@ -465,24 +521,24 @@ export default function Chat() {
                 >
                   <button
                     onClick={() => handleSelectFriend(friend.username)}
-                    className={`flex-1 flex items-center px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
-                      selectedFriend === friend.username ? 'bg-blue-50 dark:bg-blue-900/20 border-r-4 border-blue-500' : ''
+                    className={`chat-room-item flex-1 ${
+                      selectedFriend === friend.username ? 'is-active' : ''
                     }`}
                   >
-                    <span className="mr-3">{getStatusIcon(friend.status)}</span>
+                    <span className={`mr-3 ${getStatusDotClass(friend.status)}`} />
                     <div className="flex-1 text-left">
                       <div className="flex items-center justify-between">
-                        <p className={`text-sm font-medium ${unreadCount > 0 ? 'text-gray-900 dark:text-white font-bold' : 'text-gray-900 dark:text-white'}`}>
+                        <p className={`text-sm font-medium ${unreadCount > 0 ? 'font-bold text-slate-900' : 'text-slate-800'}`}>
                           {friend.username}
                         </p>
                         {/* 未读消息提示 */}
                         {unreadCount > 0 && (
-                          <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                          <span className="min-w-[20px] rounded-full bg-rose-500 px-2 py-0.5 text-center text-xs font-bold text-white">
                             {unreadCount > 99 ? '99+' : unreadCount}
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                      <p className="text-xs text-slate-500">
                         {friend.status === 'online' ? '在线' :
                          friend.status === 'busy' ? '忙碌' :
                          friend.status === 'away' ? '离开' : '离线'}
@@ -502,10 +558,10 @@ export default function Chat() {
                         }
                       }
                     }}
-                    className="hidden group-hover:flex mr-2 p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                    className="mr-2 hidden rounded-lg p-2 text-rose-500 transition-colors hover:bg-rose-50 group-hover:flex"
                     title="删除好友"
                   >
-                    <span className="text-sm">🗑️</span>
+                    <Trash2 size={15} />
                   </button>
                 </div>
               )
@@ -514,11 +570,11 @@ export default function Chat() {
         </div>
 
         {/* 底部用户信息 */}
-        <div className="h-14 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 bg-gray-50 dark:bg-gray-800">
+        <div className="chat-userbar h-14 flex items-center justify-between px-4">
           <div className="flex items-center">
-            <span className="mr-2">{getStatusIcon(status)}</span>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{username}</span>
-            <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+            <span className={`mr-2 ${getStatusDotClass(status)}`} />
+            <span className="text-sm font-medium text-slate-700">{username}</span>
+            <span className="ml-2 text-xs text-slate-500">
               {status === 'online' ? '在线' :
                status === 'busy' ? '忙碌' :
                status === 'away' ? '离开' :
@@ -527,7 +583,7 @@ export default function Chat() {
           </div>
           <button
             onClick={() => setShowLogoutConfirm(true)}
-            className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium"
+            className="text-sm font-medium text-rose-600 transition-colors hover:text-rose-700"
           >
             退出
           </button>
@@ -535,38 +591,38 @@ export default function Chat() {
       </div>
 
       {/* 右侧聊天区域 */}
-      <div className="flex-1 flex flex-col">
+      <div className="chat-main flex-1 flex flex-col">
         {/* 顶部导航栏 */}
-        <div className="h-14 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6">
+        <div className="chat-topnav h-14 flex items-center justify-between px-6">
           <div className="flex items-center space-x-4">
-            <span className="text-lg font-semibold text-gray-900 dark:text-white">💬 私聊</span>
+            <span className="topbar-title">私聊</span>
             <nav className="flex items-center space-x-2">
               <Link
                 to="/contact"
-                className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                className="nav-pill"
                 title="群聊"
               >
-                👥 群聊
+                <span className="icon-label"><Users size={14} />群聊</span>
               </Link>
               <Link
                 to="/ai"
-                className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                className="nav-pill"
                 title="AI 助手"
               >
-                🤖 AI
+                <span className="icon-label"><Bot size={14} />AI</span>
               </Link>
               <Link
                 to="/settings"
-                className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                className="nav-pill"
                 title="设置"
               >
-                ⚙️ 设置
+                <span className="icon-label"><Settings size={14} />设置</span>
               </Link>
             </nav>
           </div>
           <div className="flex items-center space-x-2">
             <span className={`text-sm ${getStatusColor()}`}>
-              {getStatusIcon(status)}
+              <span className={`inline-block mr-1.5 align-middle ${getStatusDotClass(status)}`} />
               {status === 'online' ? '在线' :
                status === 'busy' ? '忙碌' :
                status === 'away' ? '离开' : '离线'}
@@ -575,19 +631,19 @@ export default function Chat() {
         </div>
 
         {/* 聊天顶部栏 */}
-        <div className="h-14 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6">
+        <div className="chat-roombar h-14 flex items-center justify-between px-6">
           <div className="flex items-center">
             {selectedFriend ? (
               <>
-                <span className="text-xl mr-2">💬</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{selectedFriend}</span>
+                <MessageSquare size={18} className="mr-2 text-cyan-700" />
+                <span className="font-semibold text-slate-900">{selectedFriend}</span>
                 <span className={`ml-3 text-sm ${getStatusColor()}`}>
-                  {getStatusIcon(friends.find(f => f.username === selectedFriend)?.status || 'offline')}
+                  <span className={`inline-block mr-1.5 align-middle ${getStatusDotClass(friends.find(f => f.username === selectedFriend)?.status || 'offline')}`} />
                   {getStatusText()}
                 </span>
               </>
             ) : (
-              <span className="text-gray-500 dark:text-gray-400">选择一个好友开始聊天</span>
+              <span className="text-slate-500">选择一个好友开始聊天</span>
             )}
           </div>
 
@@ -595,29 +651,29 @@ export default function Chat() {
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setShowHistoryModal(true)}
-                className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                className="action-chip"
                 title="历史记录"
               >
-                📜 历史
+                <span className="icon-label"><History size={14} />历史</span>
               </button>
               <button
                 onClick={() => setShowExportModal(true)}
-                className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                className="action-chip"
                 title="导出记录"
               >
-                📥 导出
+                <span className="icon-label"><Download size={14} />导出</span>
               </button>
             </div>
           )}
         </div>
 
         {/* 消息列表 */}
-        <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-6">
+        <div className="chat-thread flex-1 overflow-y-auto p-6">
           {selectedFriend ? (
             currentMessages.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-gray-400">
+              <div className="h-full flex items-center justify-center text-slate-400">
                 <div className="text-center">
-                  <span className="text-4xl mb-4 block">💬</span>
+                  <MessageSquare size={34} className="mx-auto mb-4 text-slate-300" />
                   <p>还没有消息</p>
                   <p className="text-sm">发送一条消息开始聊天吧</p>
                 </div>
@@ -630,29 +686,37 @@ export default function Chat() {
                     className={`flex ${msg.is_own ? 'justify-end' : 'justify-start'} ${msg.is_error ? 'justify-center' : ''}`}
                   >
                     {msg.is_error ? (
-                      // 错误消息：红色背景 + 感叹号
-                      <div className="max-w-md px-4 py-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex items-center space-x-3">
-                        <span className="text-red-500 text-xl">❗</span>
-                        <div className="flex-1">
-                          <p className="text-sm text-red-700 dark:text-red-400">{msg.content}</p>
-                          <p className="text-xs text-red-500 dark:text-red-500 mt-1">{msg.timestamp}</p>
-                        </div>
+                      <div className="system-pill flex items-center space-x-2">
+                        <CircleAlert size={16} className="text-rose-500" />
+                        <p>{msg.content}</p>
+                        <span className="text-[11px] text-rose-400">{msg.timestamp}</span>
                       </div>
                     ) : (
                       <div
-                        className={`max-w-md px-4 py-2 rounded-2xl ${
+                        className={`message-bubble msg-bubble ${
                           msg.is_own
-                            ? 'bg-blue-600 text-white rounded-br-none'
-                            : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-bl-none shadow'
+                            ? 'msg-bubble-own'
+                            : 'msg-bubble-other'
                         }`}
                       >
                         {!msg.is_own && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{msg.from_user}</p>
+                          <p className="msg-sender">
+                            <User size={12} />
+                            <span>{msg.from_user}</span>
+                          </p>
                         )}
                         <p className="text-sm">{msg.content}</p>
-                        <p className={`text-xs mt-1 ${msg.is_own ? 'text-blue-100' : 'text-gray-400'}`}>
-                          {msg.timestamp}
-                        </p>
+                        <div className={`msg-meta ${msg.is_own ? 'msg-meta-own' : 'msg-meta-other'}`}>
+                          <p>
+                            {msg.timestamp}
+                          </p>
+                          {/* 自己发送的消息显示已读状态 */}
+                          {msg.is_own && (
+                            <span title={msg.is_read ? '已读' : '未读'}>
+                              {msg.is_read ? <CheckCheck size={13} /> : <Check size={13} />}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -661,9 +725,9 @@ export default function Chat() {
               </div>
             )
           ) : (
-            <div className="h-full flex items-center justify-center text-gray-400">
+            <div className="h-full flex items-center justify-center text-slate-400">
               <div className="text-center">
-                <span className="text-6xl mb-4 block">👈</span>
+                <ArrowLeft size={42} className="mx-auto mb-4 text-slate-300" />
                 <p className="text-lg">从左侧选择一个好友</p>
                 <p className="text-sm mt-2">开始私聊对话</p>
               </div>
@@ -673,7 +737,7 @@ export default function Chat() {
 
         {/* 输入框 */}
         {selectedFriend && (
-          <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
+          <div className="chat-composer p-4">
             <div className="flex items-end space-x-3">
               <textarea
                 ref={inputRef}
@@ -682,13 +746,13 @@ export default function Chat() {
                 onKeyDown={handleKeyDown}
                 placeholder="输入消息... (Enter 发送，Shift+Enter 换行)"
                 rows={1}
-                className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                className="flex-1 resize-none rounded-xl border border-white/60 bg-white/85 px-4 py-3 text-slate-900 shadow-sm outline-none transition-all focus:border-cyan-400 focus:bg-white focus:ring-2 focus:ring-cyan-200"
                 style={{ minHeight: '48px', maxHeight: '120px' }}
               />
               <button
                 onClick={handleSendMessage}
                 disabled={!inputMessage.trim() || connectionStatus !== 'connected'}
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium rounded-xl transition-colors"
+                className="rounded-xl bg-gradient-to-r from-cyan-600 to-sky-600 px-6 py-3 font-medium text-white transition-all hover:from-cyan-500 hover:to-sky-500 disabled:cursor-not-allowed disabled:from-slate-400 disabled:to-slate-400"
               >
                 发送
               </button>
@@ -699,7 +763,7 @@ export default function Chat() {
 
       {/* 添加好友模态框 */}
       {showFriendRequestModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={(e) => {
+        <div className="modal-overlay" onClick={(e) => {
           // 点击背景关闭弹窗
           if (e.target === e.currentTarget) {
             setShowFriendRequestModal(false)
@@ -708,20 +772,20 @@ export default function Chat() {
             setFriendRequestMessage('')
           }
         }}>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">添加好友</h3>
+          <div className="modal-card max-w-md">
+            <h3 className="modal-title icon-label"><UserPlus size={18} />添加好友</h3>
 
             {/* 状态提示 */}
             {friendRequestStatus === 'success' && (
-              <div className="mb-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 px-4 py-3 rounded-lg text-sm flex items-center">
-                <span className="mr-2">✅</span>
+              <div className="mb-4 border border-emerald-200 bg-emerald-50/90 text-emerald-700 px-4 py-3 rounded-lg text-sm flex items-center">
+                <CheckCircle2 size={16} className="mr-2" />
                 {friendRequestMessage}
               </div>
             )}
 
             {friendRequestStatus === 'error' && (
-              <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg text-sm flex items-center">
-                <span className="mr-2">❌</span>
+              <div className="mb-4 border border-rose-200 bg-rose-50/90 text-rose-700 px-4 py-3 rounded-lg text-sm flex items-center">
+                <CircleX size={16} className="mr-2" />
                 {friendRequestMessage}
               </div>
             )}
@@ -741,7 +805,7 @@ export default function Chat() {
               }}
               placeholder="输入用户名"
               disabled={friendRequestStatus === 'sending' || friendRequestStatus === 'success'}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4 disabled:bg-gray-100 dark:disabled:bg-gray-800"
+              className="modal-input mb-4 disabled:bg-slate-100"
               autoFocus
             />
 
@@ -754,14 +818,14 @@ export default function Chat() {
                   setFriendRequestMessage('')
                 }}
                 disabled={friendRequestStatus === 'sending'}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+                className="modal-btn modal-btn-ghost disabled:opacity-50"
               >
                 {friendRequestStatus === 'success' ? '关闭' : '取消'}
               </button>
               <button
                 onClick={handleAddFriend}
                 disabled={friendRequestStatus === 'sending' || friendRequestStatus === 'success'}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg transition-colors flex items-center min-w-[100px] justify-center"
+                className="modal-btn modal-btn-primary disabled:opacity-55 flex items-center min-w-[100px] justify-center"
               >
                 {friendRequestStatus === 'sending' ? (
                   <>
@@ -772,7 +836,7 @@ export default function Chat() {
                     发送中...
                   </>
                 ) : friendRequestStatus === 'success' ? (
-                  '✓ 已发送'
+                  '已发送'
                 ) : (
                   '发送请求'
                 )}
@@ -784,20 +848,20 @@ export default function Chat() {
 
       {/* 登出确认对话框 */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-sm">
-            <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">确认退出</h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">确定要退出登录吗？</p>
+        <div className="modal-overlay">
+          <div className="modal-card max-w-sm">
+            <h3 className="modal-title mb-2">确认退出</h3>
+            <p className="text-slate-600 mb-6">确定要退出登录吗？</p>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setShowLogoutConfirm(false)}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className="modal-btn modal-btn-ghost"
               >
                 取消
               </button>
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                className="modal-btn modal-btn-danger"
               >
                 退出
               </button>
