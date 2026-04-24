@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Sparkles } from 'lucide-react'
 import { useUserStore } from '../stores/userStore'
 import { useMessageStore } from '../stores/messageStore'
 import { wsService } from '../services/websocket'
@@ -180,33 +181,50 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
-        {/* Logo 和标题 */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
-            <span className="text-3xl">🤖</span>
+    <div className="auth-shell min-h-screen flex items-center justify-center p-4">
+      <div className="auth-wrap w-full max-w-5xl grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-0 overflow-hidden rounded-3xl border border-white/40 bg-white/40 shadow-2xl">
+        <section className="auth-hero hidden lg:flex flex-col justify-between p-10">
+          <div>
+            <div className="auth-brand mb-6 inline-flex items-center gap-3 rounded-2xl border border-white/60 bg-white/60 px-4 py-2 text-sm font-semibold text-slate-700">
+              <span className="text-lg">✦</span>
+              Flow Chat Engine
+            </div>
+            <h1 className="auth-hero-title mb-4 text-4xl font-bold leading-tight text-slate-900">
+              更流畅的团队沟通
+              <br />
+              与 AI 协作体验
+            </h1>
+            <p className="text-slate-600 text-base leading-7">
+              低延迟消息系统、多轮 AI 对话与协作房间统一在一个界面里。
+              现在登录，继续你的实时会话。
+            </p>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            AI Chat Server
-          </h1>
-          <p className="text-gray-600 dark:text-gray-300">
-            高性能 C++ AI 聊天服务器
-          </p>
-        </div>
 
-        {/* 登录卡片 */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
-          {/* 连接状态 */}
+          <div className="auth-hero-tags flex flex-wrap gap-2 text-xs text-slate-600">
+            <span className="auth-tag">C++17</span>
+            <span className="auth-tag">Boost.Asio</span>
+            <span className="auth-tag">WebSocket</span>
+            <span className="auth-tag">React + TS</span>
+          </div>
+        </section>
+
+        <section className="auth-card p-6 md:p-10">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-600 to-blue-700 shadow-lg shadow-cyan-500/30 mb-4">
+              <Sparkles size={30} className="text-white" />
+            </div>
+            <h2 className="text-3xl font-bold text-slate-900 mb-2">欢迎回来</h2>
+            <p className="text-slate-600">登录你的账号，继续聊天</p>
+          </div>
+
           <div className="flex items-center justify-center mb-6">
             <div className={`w-2 h-2 rounded-full ${getStatusColor()} mr-2 animate-pulse`}></div>
-            <span className="text-sm text-gray-500 dark:text-gray-400">{getStatusText()}</span>
+            <span className="text-sm text-slate-500">{getStatusText()}</span>
           </div>
 
-          {/* 表单 */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="username" className="auth-label block text-sm font-medium mb-1">
                 用户名
               </label>
               <input
@@ -215,14 +233,14 @@ export default function Login() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 disabled={loading}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 dark:disabled:bg-gray-800"
+                className="auth-input w-full px-4 py-2.5 rounded-xl"
                 placeholder="请输入用户名"
                 autoComplete="username"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="password" className="auth-label block text-sm font-medium mb-1">
                 密码
               </label>
               <input
@@ -231,24 +249,22 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 dark:disabled:bg-gray-800"
+                className="auth-input w-full px-4 py-2.5 rounded-xl"
                 placeholder="请输入密码"
                 autoComplete="current-password"
               />
             </div>
 
-            {/* 错误提示 */}
             {error && (
-              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
+              <div className="auth-error px-4 py-3 rounded-xl text-sm">
                 {error}
               </div>
             )}
 
-            {/* 提交按钮 */}
             <button
               type="submit"
               disabled={loading || connectionStatus !== 'connected'}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center"
+              className="auth-submit w-full rounded-xl py-2.5 px-4 font-medium text-white flex items-center justify-center"
             >
               {loading ? (
                 <>
@@ -264,26 +280,24 @@ export default function Login() {
             </button>
           </form>
 
-          {/* 提示信息 */}
-          <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+          <div className="mt-6 text-center text-sm text-slate-500">
             <p>
               还没有账号？{' '}
               <button
                 type="button"
                 onClick={() => navigate('/register')}
-                className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
+                className="font-medium text-cyan-700 hover:text-cyan-800"
               >
                 立即注册
               </button>
             </p>
           </div>
-        </div>
 
-        {/* 底部信息 */}
-        <div className="mt-6 text-center text-xs text-gray-500 dark:text-gray-400">
-          <p>支持好友私聊 · 群聊 · AI 对话</p>
-          <p className="mt-1">Powered by C++17 + Boost.Asio + React</p>
-        </div>
+          <div className="mt-8 border-t border-slate-200/70 pt-4 text-center text-xs text-slate-500">
+            <p>支持好友私聊 · 群聊 · AI 对话</p>
+            <p className="mt-1">Powered by C++17 + Boost.Asio + React</p>
+          </div>
+        </section>
       </div>
     </div>
   )

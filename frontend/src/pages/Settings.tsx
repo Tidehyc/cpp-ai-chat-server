@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useUserStore } from '../stores/userStore'
 import { useThemeStore } from '../stores/themeStore'
 import { wsService } from '../services/websocket'
+import { Circle, LogOut, Monitor, Moon, Palette, Settings as SettingsIcon, Sun, User } from 'lucide-react'
 
 export default function Settings() {
   const navigate = useNavigate()
@@ -13,17 +14,17 @@ export default function Settings() {
 
   // 用户状态选项
   const statusOptions = [
-    { value: 'online', label: '在线', icon: '🟢' },
-    { value: 'busy', label: '忙碌', icon: '🔴' },
-    { value: 'away', label: '离开', icon: '🟡' },
-    { value: 'offline', label: '离线', icon: '⚪' },
+    { value: 'online', label: '在线', icon: <Circle className="mx-auto text-emerald-500" size={18} fill="currentColor" /> },
+    { value: 'busy', label: '忙碌', icon: <Circle className="mx-auto text-rose-500" size={18} fill="currentColor" /> },
+    { value: 'away', label: '离开', icon: <Circle className="mx-auto text-amber-500" size={18} fill="currentColor" /> },
+    { value: 'offline', label: '离线', icon: <Circle className="mx-auto text-slate-400" size={18} fill="currentColor" /> },
   ]
 
   // 主题选项
   const themeOptions = [
-    { value: 'light', label: '浅色', icon: '☀️' },
-    { value: 'dark', label: '深色', icon: '🌙' },
-    { value: 'system', label: '系统', icon: '💻' },
+    { value: 'light', label: '浅色', icon: <Sun className="mx-auto text-amber-500" size={20} /> },
+    { value: 'dark', label: '深色', icon: <Moon className="mx-auto text-indigo-500" size={20} /> },
+    { value: 'system', label: '系统', icon: <Monitor className="mx-auto text-sky-600" size={20} /> },
   ]
 
   // 更新状态
@@ -47,14 +48,14 @@ export default function Settings() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+    <div className="auth-shell page-enter min-h-screen">
       {/* 顶部栏 */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <div className="chat-topnav border-b border-slate-200/60">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">⚙️ 设置</h1>
+          <h1 className="chat-title text-2xl font-bold icon-label"><SettingsIcon size={20} />设置中心</h1>
           <button
             onClick={() => navigate('/')}
-            className="px-4 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="action-chip"
           >
             ← 返回聊天
           </button>
@@ -64,15 +65,15 @@ export default function Settings() {
       {/* 设置内容 */}
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* 用户信息卡片 */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">👤 用户信息</h2>
+        <div className="panel-card p-6 mb-6">
+          <h2 className="text-lg font-semibold text-slate-900 mb-4 icon-label"><User size={17} />用户信息</h2>
           <div className="flex items-center space-x-4">
-            <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-600 to-blue-700 flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-cyan-500/25">
               {username?.charAt(0).toUpperCase()}
             </div>
             <div>
-              <p className="text-xl font-medium text-gray-900 dark:text-white">{username}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-xl font-medium text-slate-900">{username}</p>
+              <p className="text-sm text-slate-500">
                 当前状态：{statusOptions.find(s => s.value === status)?.label}
               </p>
             </div>
@@ -80,22 +81,22 @@ export default function Settings() {
         </div>
 
         {/* 状态设置 */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">📍 在线状态</h2>
+        <div className="panel-card p-6 mb-6">
+          <h2 className="text-lg font-semibold text-slate-900 mb-4 icon-label"><Circle size={14} fill="currentColor" className="text-emerald-500" />在线状态</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {statusOptions.map((option) => (
               <button
                 key={option.value}
                 onClick={() => handleUpdateStatus(option.value as typeof status)}
-                className={`p-4 rounded-lg border-2 transition-colors ${
+                className={`p-4 rounded-xl border transition-all ${
                   localStatus === option.value
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                    ? 'border-cyan-500 bg-cyan-50/75 shadow-sm shadow-cyan-200/60'
+                    : 'border-slate-200 hover:border-cyan-200 bg-white/78'
                 }`}
               >
                 <div className="text-center">
-                  <span className="text-3xl">{option.icon}</span>
-                  <p className="text-sm font-medium mt-2 text-gray-900 dark:text-white">{option.label}</p>
+                  <span className="text-3xl icon-only">{option.icon}</span>
+                  <p className="text-sm font-medium mt-2 text-slate-900">{option.label}</p>
                 </div>
               </button>
             ))}
@@ -103,22 +104,22 @@ export default function Settings() {
         </div>
 
         {/* 主题设置 */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">🎨 主题设置</h2>
+        <div className="panel-card p-6 mb-6">
+          <h2 className="text-lg font-semibold text-slate-900 mb-4 icon-label"><Palette size={17} />主题设置</h2>
           <div className="grid grid-cols-3 gap-3">
             {themeOptions.map((option) => (
               <button
                 key={option.value}
                 onClick={() => handleUpdateTheme(option.value as typeof theme)}
-                className={`p-4 rounded-lg border-2 transition-colors ${
+                className={`p-4 rounded-xl border transition-all ${
                   theme === option.value
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                    ? 'border-cyan-500 bg-cyan-50/75 shadow-sm shadow-cyan-200/60'
+                    : 'border-slate-200 hover:border-cyan-200 bg-white/78'
                 }`}
               >
                 <div className="text-center">
-                  <span className="text-3xl">{option.icon}</span>
-                  <p className="text-sm font-medium mt-2 text-gray-900 dark:text-white">{option.label}</p>
+                  <span className="text-3xl icon-only">{option.icon}</span>
+                  <p className="text-sm font-medium mt-2 text-slate-900">{option.label}</p>
                 </div>
               </button>
             ))}
@@ -126,20 +127,20 @@ export default function Settings() {
         </div>
 
         {/* 账户操作 */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">🔐 账户操作</h2>
+        <div className="panel-card p-6">
+          <h2 className="text-lg font-semibold text-slate-900 mb-4 icon-label"><LogOut size={17} />账户操作</h2>
           <div className="space-y-3">
             <button
               onClick={() => setShowLogoutConfirm(true)}
-              className="w-full bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 font-medium py-3 px-4 rounded-lg transition-colors text-left"
+              className="w-full rounded-xl border border-rose-200/70 bg-rose-50/85 hover:bg-rose-100 text-rose-600 font-medium py-3 px-4 transition-colors text-left"
             >
-              🚪 退出登录
+              <span className="icon-label"><LogOut size={15} />退出登录</span>
             </button>
           </div>
         </div>
 
         {/* 版本信息 */}
-        <div className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
+        <div className="mt-8 text-center text-sm text-slate-500">
           <p>AI Chat Server v1.0</p>
           <p className="mt-1">Powered by C++17 + Boost.Asio + React 18</p>
         </div>
@@ -147,20 +148,20 @@ export default function Settings() {
 
       {/* 登出确认对话框 */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-sm">
-            <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">确认退出</h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">确定要退出登录吗？</p>
+        <div className="modal-overlay">
+          <div className="modal-card max-w-sm">
+            <h3 className="modal-title mb-2">确认退出</h3>
+            <p className="text-slate-600 mb-6">确定要退出登录吗？</p>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setShowLogoutConfirm(false)}
-                className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className="modal-btn modal-btn-ghost"
               >
                 取消
               </button>
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                className="modal-btn modal-btn-danger"
               >
                 退出
               </button>

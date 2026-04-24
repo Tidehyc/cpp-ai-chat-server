@@ -53,10 +53,12 @@ set(SOURCES
     src/room/room_manager.cpp
     src/preset/preset_manager.cpp
     src/command/command_parser.cpp
+    src/command/command_dispatcher.cpp
     src/chat/chat_room.cpp
     src/conversation/conversation.cpp
     src/history/message_history.cpp
     src/friend/friend_manager.cpp
+    src/friend/offline_message_delivery.cpp
 )
 
 # 头文件
@@ -78,6 +80,7 @@ set(HEADERS
     src/conversation/conversation.h
     src/history/message_history.h
     src/friend/friend_manager.h
+    src/friend/offline_message_delivery.h
 )
 
 # 可执行文件
@@ -123,17 +126,24 @@ FetchContent_MakeAvailable(googletest)
 
 # 测试可执行文件
 add_executable(chat_server_test
+    tests/test_database_migration.cpp
     tests/test_user_manager.cpp
     tests/test_room_manager.cpp
     tests/test_message_history.cpp
+    tests/test_message_protocol.cpp
+    tests/test_ai_client.cpp
+    tests/test_offline_message_delivery.cpp
     tests/test_conversation.cpp
     src/storage/database.cpp
+    src/ai/ai_client.cpp
     src/user/user_manager.cpp
     src/room/room_manager.cpp
     src/utils/logger.cpp
     src/history/message_history.cpp
     src/conversation/conversation.cpp
+    src/protocol/message.cpp
     src/protocol/json_parser.cpp
+    src/friend/offline_message_delivery.cpp
 )
 
 target_link_libraries(chat_server_test PRIVATE

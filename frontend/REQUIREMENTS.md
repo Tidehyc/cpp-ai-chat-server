@@ -5,7 +5,7 @@ _创建日期：2026-04-01_
 
 ---
 
-## 📋 项目概述
+## 项目概述
 
 **项目名称**：C++ AI Chat Server 前端
 
@@ -24,7 +24,7 @@ _创建日期：2026-04-01_
 
 ---
 
-## 🎯 核心功能需求
+## 核心功能需求
 
 ### 1. 用户系统
 
@@ -35,9 +35,9 @@ _创建日期：2026-04-01_
 - [ ] 登录成功后自动跳转到聊天页面
 - [ ] 支持自动登录（刷新页面后）
 - [ ] 登录失败显示具体错误：
-  - "用户不存在"
-  - "密码错误"
-  - "用户名或密码错误"
+ - "用户不存在"
+ - "密码错误"
+ - "用户名或密码错误"
 
 #### 1.2 注册功能
 - [ ] 独立注册页面
@@ -54,10 +54,10 @@ _创建日期：2026-04-01_
 - [ ] 后端通知（/quit 命令）
 
 #### 1.4 用户状态
-- [ ] 在线 (online) 🟢
-- [ ] 忙碌 (busy) 🔴
-- [ ] 离开 (away) 🟡
-- [ ] 离线 (offline) ⚪
+- [ ] 在线 (online)
+- [ ] 忙碌 (busy)
+- [ ] 离开 (away)
+- [ ] 离线 (offline)
 - [ ] 状态同步到后端
 
 ---
@@ -115,14 +115,14 @@ _创建日期：2026-04-01_
 
 #### 4.1 房间列表
 - [ ] 显示内置房间：
-  - 🏠 #general - 综合交流群
-  - 💻 #code - 编程技术讨论
-  - 🎮 #gaming - 游戏交流
-  - 🎵 #music - 音乐分享
-  - 🎬 #movie - 电影推荐
+ - #general - 综合交流群
+ - #code - 编程技术讨论
+ - #gaming - 游戏交流
+ - #music - 音乐分享
+ - #movie - 电影推荐
 - [ ] 显示房间图标和描述
 - [ ] 当前房间高亮显示
-- [ ] 创建房间按钮（➕）
+- [ ] 创建房间按钮（添加图标）
 
 #### 4.2 加入/离开房间
 - [ ] 点击房间加入 (/join <房间名>)
@@ -148,29 +148,29 @@ _创建日期：2026-04-01_
 
 #### 5.1 AI 房间
 - [ ] 显示 AI 房间列表：
-  - 🏠 #general - 友好助手
-  - 💻 #code - 编程助手
-  - 🌐 #translate - 翻译
-  - 📚 #learn - 学习辅导
-  - ✍️ #write - 写作助手
-  - 🔧 #debug - 调试专家
+ - #general - 友好助手
+ - #code - 编程助手
+ - #translate - 翻译
+ - #learn - 学习辅导
+ - #write - 写作助手
+ - #debug - 调试专家
 - [ ] 点击切换房间
 
 #### 5.2 AI 预设
 - [ ] 显示当前预设
 - [ ] 预设菜单：
-  - 👨‍🏫 老师 - 耐心解答问题
-  - 👨‍💻 程序员 - 编程技术专家
-  - 🤝 朋友 - 知心聊天伙伴
-  - 🎤 面试官 - 模拟面试场景
-  - 🎭 评论家 - 专业评论分析
-  - 💪 健身教练 - 健身指导建议
+ - 老师 - 耐心解答问题
+ - 程序员 - 编程技术专家
+ - 朋友 - 知心聊天伙伴
+ - 面试官 - 模拟面试场景
+ - 评论家 - 专业评论分析
+ - 健身教练 - 健身指导建议
 - [ ] 切换预设 (/preset use <名称>)
 
 #### 5.3 AI 对话
 - [ ] 发送消息给 AI (/msg ai <消息>)
 - [ ] 接收 AI 响应
-- [ ] AI 消息特殊样式（带🤖标识）
+- [ ] AI 消息特殊样式（带标识）
 - [ ] 支持多轮对话
 - [ ] 上下文管理弹窗
 - [ ] 清空对话历史 (/clear)
@@ -202,9 +202,9 @@ _创建日期：2026-04-01_
 ### 7. WebSocket 连接管理
 
 #### 7.1 连接状态
-- [ ] 连接中（黄色）🟡
-- [ ] 已连接（绿色）🟢
-- [ ] 未连接（红色）🔴
+- [ ] 连接中（黄色）
+- [ ] 已连接（绿色）
+- [ ] 未连接（红色）
 - [ ] 状态显示在页面顶部
 
 #### 7.2 自动重连
@@ -229,14 +229,14 @@ _创建日期：2026-04-01_
 
 #### 8.1 页面布局
 - [ ] 左侧边栏（280px）
-  - 好友列表/房间列表
-  - 搜索框
-  - 待处理请求
-  - 底部用户信息
+ - 好友列表/房间列表
+ - 搜索框
+ - 待处理请求
+ - 底部用户信息
 - [ ] 右侧聊天区域
-  - 顶部栏（显示当前聊天对象和状态）
-  - 消息列表（可滚动）
-  - 底部输入框
+ - 顶部栏（显示当前聊天对象和状态）
+ - 消息列表（可滚动）
+ - 底部输入框
 
 #### 8.2 响应式设计
 - [ ] 适配桌面端（1920x1080）
@@ -244,113 +244,113 @@ _创建日期：2026-04-01_
 - [ ] 最小点击区域 44x44px
 
 #### 8.3 主题支持
-- [ ] 浅色主题 ☀️
-- [ ] 深色主题 🌙
-- [ ] 系统主题 💻
+- [ ] 浅色主题
+- [ ] 深色主题
+- [ ] 系统主题
 - [ ] 主题切换设置
 
 #### 8.4 空状态设计
 - [ ] 未选择好友/房间时显示提示
 - [ ] 无消息时显示空状态图标
-- [ ] 无好友时显示"点击➕添加"
+- [ ] 无好友时显示"点击添加"
 
 ---
 
-## 📁 文件结构要求
+## 文件结构要求
 
 ```
 frontend/src/
 ├── components/
-│   ├── Sidebar.tsx          # 侧边栏组件
-│   ├── ChatArea.tsx         # 聊天区域组件
-│   ├── ChatList.tsx         # 好友列表组件
-│   ├── PageLayout.tsx       # 页面布局组件
-│   ├── ContextModal.tsx     # 上下文管理弹窗
-│   ├── HistoryModal.tsx     # 历史记录弹窗
-│   ├── SearchModal.tsx      # 搜索弹窗
-│   ├── ExportModal.tsx      # 导出弹窗
-│   └── SessionExpiredModal.tsx  # 会话过期弹窗
+│ ├── Sidebar.tsx # 侧边栏组件
+│ ├── ChatArea.tsx # 聊天区域组件
+│ ├── ChatList.tsx # 好友列表组件
+│ ├── PageLayout.tsx # 页面布局组件
+│ ├── ContextModal.tsx # 上下文管理弹窗
+│ ├── HistoryModal.tsx # 历史记录弹窗
+│ ├── SearchModal.tsx # 搜索弹窗
+│ ├── ExportModal.tsx # 导出弹窗
+│ └── SessionExpiredModal.tsx # 会话过期弹窗
 ├── pages/
-│   ├── Login.tsx            # 登录页面
-│   ├── Register.tsx         # 注册页面
-│   ├── Chat.tsx             # 私聊页面（主页面）
-│   ├── Contact.tsx          # 群聊页面
-│   ├── AIAssistant.tsx      # AI 助手页面
-│   └── Settings.tsx         # 设置页面
+│ ├── Login.tsx # 登录页面
+│ ├── Register.tsx # 注册页面
+│ ├── Chat.tsx # 私聊页面（主页面）
+│ ├── Contact.tsx # 群聊页面
+│ ├── AIAssistant.tsx # AI 助手页面
+│ └── Settings.tsx # 设置页面
 ├── stores/
-│   ├── userStore.ts         # 用户状态
-│   ├── friendStore.ts       # 好友状态
-│   ├── roomStore.ts         # 房间状态
-│   ├── messageStore.ts      # 消息状态
-│   └── themeStore.ts        # 主题状态
+│ ├── userStore.ts # 用户状态
+│ ├── friendStore.ts # 好友状态
+│ ├── roomStore.ts # 房间状态
+│ ├── messageStore.ts # 消息状态
+│ └── themeStore.ts # 主题状态
 ├── services/
-│   ├── websocket.ts         # WebSocket 服务
-│   └── api.ts               # HTTP API 服务
+│ ├── websocket.ts # WebSocket 服务
+│ └── api.ts # HTTP API 服务
 ├── types/
-│   ├── index.ts             # 通用类型
-│   └── friend.ts            # 好友类型
+│ ├── index.ts # 通用类型
+│ └── friend.ts # 好友类型
 ├── hooks/
-│   ├── useWebSocket.ts      # WebSocket Hook
-│   └── useTheme.ts          # 主题 Hook
-├── App.tsx                  # 应用主组件
-├── main.tsx                 # 应用入口
-└── index.css                # 全局样式
+│ ├── useWebSocket.ts # WebSocket Hook
+│ └── useTheme.ts # 主题 Hook
+├── App.tsx # 应用主组件
+├── main.tsx # 应用入口
+└── index.css # 全局样式
 ```
 
 ---
 
-## 🔧 后端命令映射
+## 后端命令映射
 
 ### 用户命令
 ```
-/register <用户名> <密码>     # 注册
-/login <用户名> <密码>        # 登录
-/quit                        # 登出
-/status [状态]               # 设置/查看状态
+/register <用户名> <密码> # 注册
+/login <用户名> <密码> # 登录
+/quit # 登出
+/status [状态] # 设置/查看状态
 ```
 
 ### 好友命令
 ```
-/friend list                 # 查看好友列表
-/friend request <用户名>      # 发送好友请求
-/friend requests             # 查看收到的请求
-/friend accept <用户名>       # 同意请求
-/friend reject <用户名>       # 拒绝请求
-/friend del <用户名>          # 删除好友
+/friend list # 查看好友列表
+/friend request <用户名> # 发送好友请求
+/friend requests # 查看收到的请求
+/friend accept <用户名> # 同意请求
+/friend reject <用户名> # 拒绝请求
+/friend del <用户名> # 删除好友
 ```
 
 ### 群聊命令
 ```
-/rooms                       # 查看 AI 房间
-/join <房间名>               # 加入房间
-/leave                       # 离开房间
-/list                        # 查看群聊房间
-/create room <名称>          # 创建房间
+/rooms # 查看 AI 房间
+/join <房间名> # 加入房间
+/leave # 离开房间
+/list # 查看群聊房间
+/create room <名称> # 创建房间
 ```
 
 ### AI 命令
 ```
-/msg ai <消息>               # 私聊 AI
-/preset list                 # 列出预设
-/preset use <名称>            # 使用预设
-/clear                       # 清空对话
-/context                     # 查看上下文
-/context set <轮数>           # 设置上下文大小
+/msg ai <消息> # 私聊 AI
+/preset list # 列出预设
+/preset use <名称> # 使用预设
+/clear # 清空对话
+/context # 查看上下文
+/context set <轮数> # 设置上下文大小
 ```
 
 ### 历史命令
 ```
-/history <目标> [数量]        # 查看历史
-/search <关键词>             # 搜索消息
-/search from:用户             # 按用户搜索
-/search in:#房间              # 按房间搜索
-/export <目标>               # 导出记录
-/export <目标> format=json   # JSON 格式导出
+/history <目标> [数量] # 查看历史
+/search <关键词> # 搜索消息
+/search from:用户 # 按用户搜索
+/search in:#房间 # 按房间搜索
+/export <目标> # 导出记录
+/export <目标> format=json # JSON 格式导出
 ```
 
 ---
 
-## 🎨 UI 设计规范
+## UI 设计规范
 
 ### 颜色方案
 - **主色**：蓝色 (`#3b82f6`)
@@ -360,41 +360,41 @@ frontend/src/
 - **背景**：浅灰 (`#f3f4f6`) / 深色 (`#1f2937`)
 
 ### 图标规范
-- 💬 聊天/私聊
-- 👥 好友/联系人
-- 📬 消息/请求
-- ➕ 添加
-- 🏠 通用房间
-- 💻 编程房间
-- 🎮 游戏房间
-- 🎵 音乐房间
-- 🎬 电影房间
-- 🟢 在线
-- 🔴 忙碌
-- 🟡 离开
-- ⚪ 离线
+- 聊天/私聊
+- 好友/联系人
+- 消息/请求
+- 添加
+- 通用房间
+- 编程房间
+- 游戏房间
+- 音乐房间
+- 电影房间
+- 在线
+- 忙碌
+- 离开
+- 离线
 
 ### 消息样式
 - **自己的消息**：
-  - 靠右对齐
-  - 蓝色背景 (`#3b82f6`)
-  - 白色文字
-  - 右下角圆角
+ - 靠右对齐
+ - 蓝色背景 (`#3b82f6`)
+ - 白色文字
+ - 右下角圆角
 - **对方的消息**：
-  - 靠左对齐
-  - 白色背景
-  - 灰色文字
-  - 左下角圆角
-  - 显示发送者名称
+ - 靠左对齐
+ - 白色背景
+ - 灰色文字
+ - 左下角圆角
+ - 显示发送者名称
 
 ---
 
-## ⚠️ 注意事项
+## 注意事项
 
 ### 登录流程
 1. 用户输入用户名和密码
 2. 发送 `/login <用户名> <密码>`
-3. 后端返回：`✅ 登录成功！欢迎 <用户名>。TOKEN:<sessionToken>`
+3. 后端返回：`登录成功！欢迎 <用户名>。TOKEN:<sessionToken>`
 4. 前端提取 token 并保存到 localStorage
 5. 跳转到聊天页面
 
@@ -407,15 +407,15 @@ frontend/src/
 
 ### WebSocket 消息处理
 - 后端返回 JSON 格式：
-  ```json
-  {
-    "type": "system|private_message|room_message|ai_response|friend_list|online_users",
-    "content": "消息内容",
-    "from": "发送者",
-    "to": "接收者",
-    "timestamp": 1234567890
-  }
-  ```
+ ```json
+ {
+ "type": "system|private_message|room_message|ai_response|friend_list|online_users",
+ "content": "消息内容",
+ "from": "发送者",
+ "to": "接收者",
+ "timestamp": 1234567890
+ }
+ ```
 - 前端需要解析并分发到对应的处理器
 
 ### 错误处理
@@ -426,7 +426,7 @@ frontend/src/
 
 ---
 
-## 📝 测试要点
+## 测试要点
 
 ### 功能测试
 - [ ] 登录/注册/登出

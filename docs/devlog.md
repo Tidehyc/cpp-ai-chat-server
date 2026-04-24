@@ -2,6 +2,139 @@
 
 ---
 
+## 📅 2026-04-23 (第 46 天) - 前端视觉统一第二轮精修与可测性闭环 ✅
+
+### 完成的工作
+
+- [x] 完成 Contact / AIAssistant / Settings 三页第二轮视觉统一
+- [x] 提炼全局样式令牌，新增通用 UI 类（弹窗、卡片、操作按钮、菜单面板）
+- [x] 补充可访问性与动效细节（`focus-visible`、`prefers-reduced-motion`）
+- [x] 输出本次专项测试清单，便于快速验收
+
+### 问题背景
+
+- 第一轮改造后页面整体已切到新风格，但仍存在“局部样式不统一、弹窗风格混杂、交互细节不一致”的体验断层。
+- 用户要求“功能更新后可以直接测试，并沉淀学习文档”，需要把视觉改造转化为可执行验收路径。
+
+### 根因分析
+
+1. 页面样式主要依赖内联 Tailwind 类，缺少跨页面复用的视觉语义类，导致一致性成本高。
+2. 旧弹窗残留 `dark:*` 与灰色系类名，和新浅色玻璃风冲突。
+3. 缺少面向“本次变更范围”的快速测试入口，验收成本偏高。
+
+### 实现细节
+
+1. **新增全局复用样式，统一视觉语义**
+
+```css
+.action-chip { border-radius: 10px; padding: 6px 12px; }
+.panel-card { border-radius: 14px; backdrop-filter: blur(8px); }
+.modal-overlay { background: rgba(15, 23, 42, 0.52); }
+.modal-card { background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(248,252,255,.92)); }
+```
+
+2. **页面接入通用类并消除风格漂移**
+
+```tsx
+<div className="chat-shell page-enter h-screen flex flex-col md:flex-row">
+...
+<button className="action-chip">📥 导出</button>
+...
+<div className="modal-overlay">
+  <div className="modal-card max-w-sm">...</div>
+</div>
+```
+
+3. **补充可访问性与低动态偏好支持**
+
+```css
+:focus-visible { outline: 2px solid rgba(14, 165, 233, 0.65); }
+@media (prefers-reduced-motion: reduce) { * { animation-duration: 0.01ms !important; } }
+```
+
+### 验证与证据
+
+- 前端关键文件静态检查结果：无错误
+  - `frontend/src/index.css`
+  - `frontend/src/pages/Contact.tsx`
+  - `frontend/src/pages/AIAssistant.tsx`
+  - `frontend/src/pages/Settings.tsx`
+- 三个页面已打开进行人工验收：
+  - `http://localhost:5173/contact`
+  - `http://localhost:5173/ai`
+  - `http://localhost:5173/settings`
+- 已新增专项测试入口：`frontend/TEST_CHECKLIST.md` 的“零、本次更新快速验收（v1.1.3 UI 精修）”
+
+### 踩坑与经验
+
+- 视觉重构如果只做“页面内替换类名”，后续容易再次分叉；应尽早抽出语义化通用类。
+- 弹窗是视觉一致性的高频锚点，统一弹窗通常能显著提升整体完成度感知。
+- 每轮改造都配一个“最小可执行测试清单”，能减少沟通成本并提升反馈质量。
+
+### 后续优化
+
+- [ ] 将 `Chat.tsx` 中残留旧风格弹窗也迁移到同一 `modal-*` 体系。
+- [ ] 抽离轻量 UI 组件层（Button/Card/Modal）以减少页面重复样式。
+- [ ] 增加前端视觉回归截图基线（关键页面三端尺寸）。
+
+---
+
+## 📅 2026-04-23 (第 45 天) - 分支保护落地后合并验收闭环 ✅
+
+### 完成的工作
+
+- [x] 确认 `main` 分支保护规则生效（禁止直推，要求 PR 与 required checks）
+- [x] 通过功能分支创建并合并 PR（`chore/enable-backend-checks-workflow`）
+- [x] 验证 `backend-checks` 工作流已进入远端 `main`
+- [x] 合并后执行本地双模式验收（默认模式 + 严格门禁模式）
+
+### 问题背景
+
+- 之前文档与策略已就绪，但还缺“规则真实拦截 + PR 合并 + 工作流可见 + 验收通过”的最后闭环证据。
+- 用户反馈 Actions 页面找不到最新工作流，需要定位是“配置问题”还是“工作流尚未进入 main”。
+
+### 根因分析
+
+1. 当时远端 `main` 尚未包含 `.github/workflows/backend-checks.yml`，因此 Actions 不会出现对应运行。
+2. 分支保护启用后，直接 push 到 `main` 会被拒绝，必须改为 PR 流程。
+
+### 实现细节
+
+1. **通过 PR 路径合并工作流变更**
+
+```text
+main 直推被拒绝（规则生效） -> 创建功能分支 -> 发起 PR -> 合并到 main
+```
+
+2. **合并后验收命令**
+
+```bash
+bash scripts/run_backend_checks.sh
+PERF_WARN_FAIL=1 PERF_WARN_RATIO=0.80 bash scripts/run_backend_checks.sh
+```
+
+### 验证与证据
+
+- 远端 `main` 最新提交为 PR 合并提交：`Merge pull request #1 from Tidehyc/chore/enable-backend-checks-workflow`。
+- 远端 `main` 可读取到工作流文件：`.github/workflows/backend-checks.yml`（`name: backend-checks`）。
+- 合并后本地验收结果：
+  - 构建通过
+  - CTest `36/36` 通过
+  - 默认模式：`status=OK`
+  - 严格模式（`PERF_WARN_FAIL=1`）本次未触发 warning，退出码 `0`，符合策略预期
+
+### 踩坑与经验
+
+- “看不到工作流运行”先检查远端 `main` 是否有 workflow 文件，再判断 UI 与权限问题。
+- 启用分支保护后，应把“直推失败”视为正确行为，并尽快切换到 PR 驱动流程。
+
+### 后续优化
+
+- [ ] 在仓库贡献指南中补充“受保护分支提交流程（branch -> PR -> merge）”。
+- [ ] 增加一条轻量触发说明，方便新成员快速验证 `backend-checks` 是否生效。
+
+---
+
 ## 📅 2026-04-23 (第 44 天) - Required Checks 配置文档落地 ✅
 
 ### 完成的工作

@@ -61,7 +61,7 @@ export function useWebSocket() {
           id: Date.now(),
           type: 'ai',
           room_name: '#general',
-          from_user: '🤖 AI',
+          from_user: 'AI',
           content: message.content,
           timestamp: message.timestamp,
           is_ai: true

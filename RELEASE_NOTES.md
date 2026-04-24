@@ -1,3 +1,59 @@
+# Release Notes - v1.1.2
+
+_发布日期：2026-04-23_
+
+---
+
+## 🔒 仓库治理与 CI 门禁
+
+### 分支保护与 Required Checks 落地
+
+- **启用 main 分支保护** - 禁止直接推送，必须通过 PR 合并
+- **配置必过检查 `backend-checks`** - 将后端构建、测试和性能汇总纳入合并门禁
+- **完成规则生效验证** - 直推 `main` 被规则拒绝，PR 路径正常合并
+
+### CI 工作流可见性与流程闭环
+
+- **新增后端检查工作流** - `.github/workflows/backend-checks.yml`
+- **统一后端检查入口** - `scripts/run_backend_checks.sh`（构建 + CTest + 基准 + 汇总）
+- **性能趋势汇总自动化** - `scripts/summarize_perf_reports.py` 生成 markdown/csv 摘要
+- **门禁策略已连通** - 工作流进入 `main` 后可在 Actions 页面查看运行记录
+
+### 文档与运维指南补齐
+
+- **新增分支保护配置文档** - `docs/BRANCH_PROTECTION_REQUIRED_CHECKS.md`
+- **README 增加治理入口** - 补齐规则配置与 CI 说明导航
+- **开发日志增加验收记录** - 形成“策略实现 -> 平台配置 -> 合并验证”的完整证据链
+
+---
+
+## 📊 版本对比
+
+| 版本 | 发布日期 | 主要更新 |
+|------|----------|----------|
+| v1.1.2 | 2026-04-23 | 分支保护与 required checks 落地、backend-checks 工作流上线 |
+| v1.1.1 | 2026-04-04 | 离线消息推送修复、编译问题修复 |
+| v1.1.0 | 2026-04-03 | 好友系统与 Web 前端 |
+| v1.0.0 | 2026-03-28 | 初始版本 |
+
+---
+
+## 📝 完整更新日志
+
+### v1.1.2 (2026-04-23)
+
+**新增**：
+- ✅ main 分支保护与 required checks（`backend-checks`）
+- ✅ `backend-checks` GitHub Actions 工作流
+- ✅ 一键后端检查脚本与性能趋势汇总脚本
+- ✅ 分支保护与必过检查配置文档
+
+**优化**：
+- ✅ 受保护分支合并流程规范化（branch -> PR -> checks -> merge）
+- ✅ CI 可见性增强（后端检查结果可在 Actions 追踪）
+
+---
+
 # Release Notes - v1.1.1
 
 _发布日期：2026-04-04_

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { ArrowLeft, MessageSquare } from 'lucide-react'
 import type { Message } from '../types'
 
 interface ChatAreaProps {
@@ -48,7 +49,7 @@ export default function ChatArea({
     return (
       <div className="h-full flex items-center justify-center text-gray-400">
         <div className="text-center">
-          <span className="text-6xl mb-4 block">👈</span>
+          <ArrowLeft size={42} className="mx-auto mb-4 text-slate-300" />
           <p className="text-lg">从左侧选择一个聊天</p>
           <p className="text-sm mt-2">开始对话</p>
         </div>
@@ -63,7 +64,7 @@ export default function ChatArea({
         {messages.length === 0 ? (
           <div className="h-full flex items-center justify-center text-gray-400">
             <div className="text-center">
-              <span className="text-4xl mb-4 block">💬</span>
+              <MessageSquare size={34} className="mx-auto mb-4 text-slate-300" />
               <p>还没有消息</p>
               <p className="text-sm">发送一条消息开始聊天吧</p>
             </div>

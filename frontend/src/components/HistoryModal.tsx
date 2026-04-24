@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { History, MessageSquare, X } from 'lucide-react'
 import { useMessageStore } from '../stores/messageStore'
 import { wsService } from '../services/websocket'
 import type { Message } from '../types'
@@ -91,12 +92,12 @@ export default function HistoryModal({ isOpen, onClose, target }: HistoryModalPr
       <div className="bg-white rounded-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
         {/* 标题 */}
         <div className="h-14 border-b border-gray-200 flex items-center justify-between px-6">
-          <h3 className="text-lg font-semibold">📜 聊天记录 - {target}</h3>
+          <h3 className="text-lg font-semibold icon-label"><History size={17} />聊天记录 - {target}</h3>
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            ✕
+            <X size={16} />
           </button>
         </div>
 
@@ -173,7 +174,7 @@ export default function HistoryModal({ isOpen, onClose, target }: HistoryModalPr
             </div>
           ) : (
             <div className="text-center py-12 text-gray-400">
-              <span className="text-4xl mb-4 block">📜</span>
+              <MessageSquare size={32} className="mx-auto mb-4 text-slate-300" />
               <p>暂无历史记录</p>
             </div>
           )}

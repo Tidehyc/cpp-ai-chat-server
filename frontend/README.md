@@ -66,6 +66,14 @@ frontend/
 | React Markdown | Markdown 渲染 |
 | Syntax Highlighter | 代码高亮 |
 
+## 🎨 图标规范（已锁定）
+
+前端已统一使用 `lucide-react` 线性图标，禁止在 UI 文案中继续引入 emoji 作为功能图标。
+
+- 规范文档：`frontend/ICON_GUIDELINES.md`
+- 适用范围：`src/pages/`、`src/components/`、`src/stores/` 中所有会渲染到 UI 的图标或状态标识
+- 原则：统一尺寸、统一线宽、统一颜色语义、统一交互反馈
+
 ## 📋 功能列表
 
 ### 第一阶段 (MVP) ✅

@@ -15,7 +15,9 @@ public:
     bool init();
     void save_message(const Message& msg);
     std::vector<Message> get_messages(const std::string& user, int limit = 50);
-    
+    void mark_messages_read(const std::string& from_user, const std::string& to_user);
+    int get_unread_count(const std::string& user);
+
     // 获取 SQLite 数据库句柄
     sqlite3* get_db() { return db_; }
 

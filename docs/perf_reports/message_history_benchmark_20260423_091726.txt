@@ -1,0 +1,7 @@
+=== Message History Benchmark ===
+rows=50000, rounds=100
+indexed_total_ms=30.70
+indexed_avg_ms=0.3070
+no_index_total_ms=3418.09
+no_index_avg_ms=34.1809
+speedup=111.34x

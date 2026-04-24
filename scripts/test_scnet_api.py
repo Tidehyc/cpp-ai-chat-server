@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
 """测试超算互联网 API，查看支持的模型"""
 
+import os
+import sys
 import requests
 import json
 
-API_KEY = "sk-MTY4LTIxOTI1NzkwODE0LTE3NzQ1OTY0NTU1NDU="
+API_KEY = os.getenv("SCNET_API_KEY") or os.getenv("AI_API_KEY")
 BASE_URL = "https://api.scnet.cn/api/llm/v1"
+
+if not API_KEY:
+    print("错误：请先设置 SCNET_API_KEY 或 AI_API_KEY 环境变量。")
+    sys.exit(1)
 
 print("=" * 50)
 print("测试超算互联网 API")
