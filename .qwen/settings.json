@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(pkill *)",
+      "Bash(sleep *)",
+      "Bash(rm *)",
+      "Bash(npm install)",
+      "Bash(make *)",
+      "Bash(./chat_server)",
+      "Bash(nohup *)",
+      "Bash(python3 *)",
+      "Bash(git commit *)",
+      "Bash(git tag *)",
+      "Bash(git push *)",
+      "Bash(git add *)"
+    ]
+  },
+  "$version": 3
+}
