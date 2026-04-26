@@ -1,0 +1,16 @@
+# Node dependencies and build output
+node_modules/
+dist/
+
+# Git metadata
+.git/
+
+# Local editor files
+.vscode/
+.idea/
+
+# Tests and docs are not required for the production frontend image
+README.md
+REQUIREMENTS.md
+TEST_CHECKLIST.md
+ICON_GUIDELINES.md

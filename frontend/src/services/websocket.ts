@@ -11,6 +11,20 @@ interface WebSocketConfig {
   heartbeatInterval: number
 }
 
+function resolveDefaultWebSocketUrl(): string {
+  const envUrl = import.meta.env.VITE_WS_URL?.trim()
+  if (envUrl) {
+    return envUrl
+  }
+
+  if (typeof window === 'undefined') {
+    return 'ws://127.0.0.1:8080'
+  }
+
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  return `${protocol}//${window.location.host}/ws`
+}
+
 class WebSocketService {
   private ws: WebSocket | null = null
   private config: WebSocketConfig
@@ -29,7 +43,7 @@ class WebSocketService {
   private messageBuffer: string[] = []
   private connectPromise: Promise<void> | null = null
 
-  constructor(url: string = 'ws://127.0.0.1:8080') {
+  constructor(url: string = resolveDefaultWebSocketUrl()) {
     this.config = {
       url,
       maxReconnectAttempts: 10,
