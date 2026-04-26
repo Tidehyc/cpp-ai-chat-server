@@ -1,4 +1,4 @@
-# C++ AI Chat Server v1.1.2
+# C++ AI Chat Server v1.1.3
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![C++](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://isocpp.org/)
@@ -8,13 +8,12 @@
 
 ---
 
-## 🆕 最近更新（v1.1.2）
+## 🆕 最近更新（v1.1.3）
 
-- 启用 `main` 分支保护：禁止直推，必须通过 PR 合并
-- 配置 required check：`backend-checks`（合并前必过）
-- 上线后端检查工作流：`.github/workflows/backend-checks.yml`
-- 新增统一后端检查入口：`scripts/run_backend_checks.sh`
-- 新增性能趋势汇总：`scripts/summarize_perf_reports.py`
+- 完成提交前隐私扫描：移除测试脚本明文 API Key，统一走环境变量注入
+- 完成大规模改动 PR 合并收尾：功能分支合并回 `main`，临时分支已清理
+- 前端视觉体系与图标规范统一落地：新增图标规范文档并全站收敛
+- 后端协议/存储与已读状态链路增强：序列化、迁移、事务投递与测试覆盖完善
 
 ---
 
@@ -240,9 +239,19 @@ cpp-ai-chat-server/
 
 ### 开发文档
 - [docs/devlog.md](docs/devlog.md) - 开发日志
+- [docs/PRODUCT_LAUNCH_PLAYBOOK.md](docs/PRODUCT_LAUNCH_PLAYBOOK.md) - 产品化分阶段上线路线与验收清单
 - [docs/BACKEND_TODO_CHECKLIST.md](docs/BACKEND_TODO_CHECKLIST.md) - 后端代办清单（按优先级执行）
+- [docs/CONTRIBUTING_BACKEND.md](docs/CONTRIBUTING_BACKEND.md) - 后端标准提交流程与本地自检
 - [docs/PERFORMANCE_REPORT_TEMPLATE.md](docs/PERFORMANCE_REPORT_TEMPLATE.md) - 性能报告模板
+- [docs/perf_reports/PERFORMANCE_BASELINE_20260425.md](docs/perf_reports/PERFORMANCE_BASELINE_20260425.md) - 性能基线记录
+- [docs/perf_reports/concurrent_connections_20260425.md](docs/perf_reports/concurrent_connections_20260425.md) - 并发压测记录
+- [docs/perf_reports/concurrency_test_matrix_20260425.md](docs/perf_reports/concurrency_test_matrix_20260425.md) - 并发参数矩阵（日常回归 200 / 300 / 600）
+- [docs/PERF_GATE_CHANGE_POLICY.md](docs/PERF_GATE_CHANGE_POLICY.md) - 性能门禁阈值治理策略
+- [docs/RELEASE_DOC_CHECKLIST.md](docs/RELEASE_DOC_CHECKLIST.md) - 发布文档核对清单
+- [docs/DB_BACKUP_RECOVERY_RUNBOOK.md](docs/DB_BACKUP_RECOVERY_RUNBOOK.md) - 数据库备份与恢复演练手册
+- [scripts/verify_restore_db.sh](scripts/verify_restore_db.sh) - 数据库恢复后一键验证脚本
 - [docs/BRANCH_PROTECTION_REQUIRED_CHECKS.md](docs/BRANCH_PROTECTION_REQUIRED_CHECKS.md) - 分支保护与必过检查配置
+- [docs/BRANCH_PROTECTION_RELEASE_TEMPLATE.md](docs/BRANCH_PROTECTION_RELEASE_TEMPLATE.md) - release 分支保护模板
 - [docs/study_notes.md](docs/study_notes.md) - 学习笔记
 - [docs/study_notes_phase5.2.md](docs/study_notes_phase5.2.md) - 阶段 5.2 学习笔记
 - [docs/study_notes_phase5.3.md](docs/study_notes_phase5.3.md) - 阶段 5.3 学习笔记
@@ -270,6 +279,23 @@ bash scripts/run_backend_checks.sh
 
 性能报告模板见 [docs/PERFORMANCE_REPORT_TEMPLATE.md](docs/PERFORMANCE_REPORT_TEMPLATE.md)。
 
+### 治理巡检（发布前自检）
+
+```bash
+bash scripts/audit_backend_governance.sh
+```
+
+该脚本会检查工作流、门禁策略、文档链接和 PR 模板是否齐全，输出可直接贴到 PR 评论的机器可读结果。
+
+### 数据库备份与恢复
+
+```bash
+bash scripts/backup_db.sh
+bash scripts/restore_db.sh
+```
+
+备份与恢复演练手册见 [docs/DB_BACKUP_RECOVERY_RUNBOOK.md](docs/DB_BACKUP_RECOVERY_RUNBOOK.md)。
+
 ### 性能历史汇总（趋势）
 
 ```bash
@@ -280,6 +306,9 @@ python3 scripts/summarize_perf_reports.py
 
 - `docs/perf_reports/message_history_benchmark_summary.md`
 - `docs/perf_reports/message_history_benchmark_summary.csv`
+- `docs/perf_reports/concurrency_test_matrix_20260425.md`
+
+并发回归口径：日常执行建议固定为 `200 / 300 / 600` 三档；`400 / 500` 仅作为已验证的探索档位保留。
 
 说明：`scripts/run_backend_checks.sh` 已在基准执行后自动调用该汇总脚本；当前规则会在最新 speedup 低于历史均值的 80% 时输出 warning。
 
@@ -304,6 +333,27 @@ PERF_WARN_FAIL=1 PERF_WARN_RATIO=0.80 bash scripts/run_backend_checks.sh
   - 其他分支：默认 `PERF_WARN_FAIL=0`（仅告警，不阻断）
 
 分支保护与 required checks 具体配置步骤见 [docs/BRANCH_PROTECTION_REQUIRED_CHECKS.md](docs/BRANCH_PROTECTION_REQUIRED_CHECKS.md)。
+
+失败分类与退出码约定（`scripts/run_backend_checks.sh`）：
+
+- `11` / `21`：`build`（配置或编译失败）
+- `31`：`test`（CTest 失败）
+- `41`：`perf`（基准或汇总执行失败）
+- `51`：`perf-gate`（性能门禁触发）
+
+CI 会在 Job Summary 输出 `category` 和 `next_action`，用于快速定位处理路径。
+
+阈值变更治理：
+
+- 阈值调整必须走 PR 评审，不允许直接修改默认门禁参数。
+- 每次调整都需新增记录文件，模板见 `docs/perf_reports/PERF_GATE_CHANGE_RECORD_TEMPLATE.md`。
+- 策略详情见 `docs/PERF_GATE_CHANGE_POLICY.md`。
+
+发布文档核对：
+
+- 每次发布前请先执行 `docs/RELEASE_DOC_CHECKLIST.md` 中的核对步骤。
+- README、Release Notes、devlog 的版本/日期信息必须同步。
+- 新增治理文档后，README 文档索引也要同步更新。
 
 ---
 

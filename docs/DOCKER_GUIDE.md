@@ -73,7 +73,7 @@ docker ps
 docker-compose logs -f
 
 # 测试连接
-curl http://localhost:8080
+curl http://localhost:8080/health
 ```
 
 ---

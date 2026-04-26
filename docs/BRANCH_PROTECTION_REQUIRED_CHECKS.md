@@ -61,3 +61,8 @@ PERF_WARN_FAIL=1 PERF_WARN_RATIO=0.80 bash scripts/run_backend_checks.sh
 
 3. 想对 release 分支也启用严格门禁
 - 复制 `main` 的分支保护规则到 `release/*`，并保留 required checks 设置。
+
+## 关联文档
+
+- `docs/CONTRIBUTING_BACKEND.md`
+- `docs/BRANCH_PROTECTION_RELEASE_TEMPLATE.md`

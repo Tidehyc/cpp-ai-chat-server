@@ -8,6 +8,14 @@
 - 环境：CPU / 内存 / OS
 - 数据规模：rows=50000, rounds=100（或自定义）
 
+## 门禁阈值上下文
+
+- PERF_WARN_RATIO：
+- PERF_WARN_FAIL：
+- 当前门禁模式：main/release 严格门禁 or feature 告警模式
+- 阈值来源：默认 / 本次临时覆盖 / 已变更策略
+- 策略文档：`docs/PERF_GATE_CHANGE_POLICY.md`
+
 ## 执行命令
 
 ```bash
@@ -46,3 +54,9 @@ speedup=...x
 - 后续行动项：
   - [ ] 
   - [ ] 
+
+## 阈值治理记录（如发生调整）
+
+- 是否涉及阈值变更：是 / 否
+- 记录文件：`docs/perf_reports/perf_gate_changes/YYYYMMDD-HHMM-<topic>.md`
+- 模板：`docs/perf_reports/PERF_GATE_CHANGE_RECORD_TEMPLATE.md`

@@ -38,8 +38,11 @@ sudo chmod +x /usr/local/bin/docker-compose
 # 开放端口
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
-sudo ufw allow 8080/tcp  # 后端 WebSocket
 ```
+
+生产部署时不建议将后端 8080 直接暴露到公网。后端应仅在容器/内网中可达，由前端 Nginx 统一通过 `/ws` 和 `/api` 反代。
+
+如果你需要本地开发或直连调试后端，再临时开放 8080；生产环境默认不要开放该端口。
 
 ---
 
@@ -69,198 +72,50 @@ AI_MODEL=MiniMax-M2.5
 
 # 服务器配置
 SERVER_PORT=8080
+
+# 前端 WebSocket 配置（可选）
+# 默认同源 /ws；如独立部署可设置为 wss://your-domain.com/ws
+VITE_WS_URL=/ws
 ```
 
-### 2.3 修改 docker-compose.yml 用于公网部署
+### 2.3 已提供的生产模板文件
 
-创建 `docker-compose.prod.yml`：
+仓库里已经补齐了可直接使用的生产模板，不需要手工抄写下面的配置片段：
 
-```yaml
-version: '3.8'
+- [docker-compose.prod.yml](../docker-compose.prod.yml) - 后端 + 前端 + HTTPS/WSS 入口
+- [frontend/Dockerfile.prod](../frontend/Dockerfile.prod) - 前端生产镜像
+- [frontend/nginx/nginx.conf](../frontend/nginx/nginx.conf) - 前端静态站点与反代配置
 
-services:
-  # 后端服务器
-  backend:
-    build: .
-    container_name: chat-backend
-    ports:
-      - "8080:8080"
-    environment:
-      - AI_API_KEY=${AI_API_KEY}
-      - AI_API_URL=${AI_API_URL}
-      - AI_MODEL=${AI_MODEL}
-      - SERVER_PORT=8080
-    volumes:
-      - chat_data:/app/data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "8080"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+启动时建议直接使用：
 
-  # 前端 Nginx
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile.prod
-    container_name: chat-frontend
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro  # SSL 证书
-    depends_on:
-      - backend
-    restart: unless-stopped
-
-volumes:
-  chat_data:
+```bash
+docker-compose -f docker-compose.prod.yml up -d --build
 ```
 
-### 2.4 创建前端 Dockerfile
+### 2.4 前端 WebSocket 连接方式
 
-创建 `frontend/Dockerfile.prod`：
+前端现在默认连接同源的 `/ws`，浏览器在 HTTPS 页面下会自动使用 WSS。
+如果前端和后端不是同源部署，可以在 `frontend/.env.production` 中显式指定：
 
-```dockerfile
-# 构建阶段
-FROM node:20-alpine AS builder
-
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --production
-
-COPY . .
-RUN npm run build
-
-# 生产阶段
-FROM nginx:alpine
-
-COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]
+```ini
+VITE_WS_URL=wss://your-domain.com/ws
 ```
 
-### 2.5 创建前端 Nginx 配置
+如需本地开发直连后端，也可以设置为：
 
-创建 `frontend/nginx.conf`：
-
-```nginx
-server {
-    listen 80;
-    server_name localhost;
-
-    root /usr/share/nginx/html;
-    index index.html;
-
-    # SPA 路由支持
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # 静态资源缓存
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-}
+```ini
+VITE_WS_URL=ws://localhost:8080/ws
 ```
 
-### 2.6 创建后端 Nginx 配置（反向代理）
-
-创建 `nginx/nginx.conf`：
-
-```nginx
-events {
-    worker_connections 1024;
-}
-
-http {
-    upstream backend {
-        server backend:8080;
-    }
-
-    server {
-        listen 80;
-        server_name your-domain.com;  # 替换为你的域名
-
-        # 前端静态文件
-        location / {
-            root /usr/share/nginx/html;
-            index index.html;
-            try_files $uri $uri/ /index.html;
-        }
-
-        # WebSocket 代理
-        location /ws {
-            proxy_pass http://backend;
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection "upgrade";
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_read_timeout 86400;
-        }
-
-        # API 代理
-        location /api {
-            proxy_pass http://backend;
-            proxy_http_version 1.1;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-        }
-    }
-
-    # HTTPS 配置（可选）
-    # server {
-    #     listen 443 ssl;
-    #     server_name your-domain.com;
-    #
-    #     ssl_certificate /etc/nginx/ssl/cert.pem;
-    #     ssl_certificate_key /etc/nginx/ssl/key.pem;
-    #
-    #     location / {
-    #         root /usr/share/nginx/html;
-    #         try_files $uri $uri/ /index.html;
-    #     }
-    #
-    #     location /ws {
-    #         proxy_pass http://backend;
-    #         proxy_http_version 1.1;
-    #         proxy_set_header Upgrade $http_upgrade;
-    #         proxy_set_header Connection "upgrade";
-    #         proxy_set_header Host $host;
-    #     }
-    # }
-}
-```
-
-### 2.7 修改前端 WebSocket 配置
-
-编辑 `frontend/src/services/websocket.ts`，将 WebSocket URL 改为环境变量：
-
-```typescript
-// 修改构造函数
-constructor(url?: string) {
-    this.config = {
-        url: url || process.env.VITE_WS_URL || 'ws://localhost:8080',
-        maxReconnectAttempts: 10,
-        reconnectDelay: 3000,
-        heartbeatInterval: 30000,
-    }
-}
-```
+前端 WebSocket 服务会优先读取 `VITE_WS_URL`，否则使用当前页面协议与主机拼接 `/ws`。
 
 创建 `frontend/.env.production`：
 
 ```ini
 VITE_WS_URL=wss://your-domain.com/ws
 ```
+
+如果使用 Vite 开发服务器，本地 `frontend/vite.config.ts` 的 `/ws` 代理会把连接转发到后端 `ws://localhost:8080`。
 
 ### 2.8 启动服务
 
@@ -335,10 +190,11 @@ sudo crontab -e
 ### 4.1 测试后端
 
 ```bash
-# 检查后端是否运行
-curl http://your-server-ip:8080
+# 检查后端是否运行（生产中通常只在内网/容器网络中检查）
+docker-compose -f docker-compose.prod.yml exec -T backend curl -fsS http://127.0.0.1:8080/health
 
-# 应该返回 WebSocket 升级响应
+# 如果你是本地直连调试，可临时访问 8080
+# curl http://your-server-ip:8080
 ```
 
 ### 4.2 测试前端
@@ -352,10 +208,49 @@ curl http://your-server-ip:8080
 打开浏览器控制台，输入：
 
 ```javascript
-const ws = new WebSocket('ws://your-server-ip:8080');
+const ws = new WebSocket('wss://your-domain.com/ws');
 ws.onopen = () => console.log('连接成功');
 ws.onmessage = (e) => console.log('收到消息:', e.data);
 ```
+
+生产环境建议只通过 HTTPS/WSS 访问，避免明文 WebSocket 直接暴露。
+
+---
+
+## 数据库备份与恢复（B2）
+
+数据库采用 SQLite 持久化到 Docker volume。建议每天执行一次全量备份，并保留最近 7 天的备份文件。
+
+### 备份命令
+
+```bash
+bash scripts/backup_db.sh
+```
+
+### 恢复命令
+
+```bash
+bash scripts/restore_db.sh
+```
+
+如需指定某个备份文件，也可以传入路径：
+
+```bash
+bash scripts/restore_db.sh backups/db/chat.db.20260425_030000.sqlite3
+```
+
+### 恢复建议
+
+1. 恢复前先确认当前后端可短暂停机。
+2. 恢复后执行 `docker-compose -f docker-compose.prod.yml exec -T backend curl -fsS http://127.0.0.1:8080/health`。
+3. 至少抽查用户、消息、房间三类数据是否可正常读取。
+4. 如需一键完成恢复 + 健康检查 + 抽样校验，可执行 `bash scripts/verify_restore_db.sh [备份文件]`。
+
+### 运维注意事项
+
+- 备份文件应保留在独立目录，不要与源码混放。
+- 恢复前不要覆盖原备份。
+- 如果恢复失败，先保留现场，再切回上一个可用备份。
 
 ---
 
@@ -417,3 +312,80 @@ location /ws {
     ...
 }
 ```
+
+---
+
+## 监控与告警（已提供模板）
+
+生产编排已内置监控栈：Prometheus + Grafana + node-exporter + blackbox-exporter。
+
+### 启动方式
+
+```bash
+docker-compose -f docker-compose.prod.yml up -d --build
+```
+
+### 访问入口
+
+- Grafana: `http://127.0.0.1:3000`
+- Prometheus: `http://127.0.0.1:9090`
+
+默认 Grafana 账号从环境变量读取：
+
+- `GRAFANA_ADMIN_USER`（默认 `admin`）
+- `GRAFANA_ADMIN_PASSWORD`（默认 `change_me_now`，上线请务必修改）
+
+### 已预置采集与探测
+
+- 主机资源：CPU / 内存（node-exporter）
+- 服务可用性：
+    - `http://backend:8080/health`
+    - `https://frontend:443/health`
+    （blackbox-exporter 主动探测）
+
+### 已预置告警阈值
+
+- `BackendHealthcheckFailed`：后端健康检查连续 2 分钟失败（critical）
+- `FrontendHealthcheckFailed`：前端健康检查连续 2 分钟失败（warning）
+- `HostCpuUsageHigh`：主机 CPU 连续 5 分钟 > 85%（warning）
+- `HostMemoryUsageHigh`：主机内存连续 5 分钟 > 90%（warning）
+
+### 看板文件位置
+
+- [monitoring/grafana/dashboards/chat-ops-overview.json](../monitoring/grafana/dashboards/chat-ops-overview.json)
+
+### 配置文件位置
+
+- [monitoring/prometheus/prometheus.yml](../monitoring/prometheus/prometheus.yml)
+- [monitoring/prometheus/alerts.yml](../monitoring/prometheus/alerts.yml)
+- [monitoring/blackbox/blackbox.yml](../monitoring/blackbox/blackbox.yml)
+
+---
+
+## 发布与回滚演练（已提供模板）
+
+已提供可执行脚本与演练手册：
+
+- [scripts/release_prod.sh](../scripts/release_prod.sh)
+- [scripts/rollback_prod.sh](../scripts/rollback_prod.sh)
+- [docs/RELEASE_ROLLBACK_RUNBOOK.md](./RELEASE_ROLLBACK_RUNBOOK.md)
+
+首次使用请赋予执行权限：
+
+```bash
+chmod +x scripts/release_prod.sh scripts/rollback_prod.sh
+```
+
+发布演练：
+
+```bash
+./scripts/release_prod.sh v2026.04.24-01
+```
+
+回滚演练：
+
+```bash
+./scripts/rollback_prod.sh v2026.04.24-01
+```
+
+每次执行都会自动在 [docs/release_records/](./release_records/) 生成记录文件。
