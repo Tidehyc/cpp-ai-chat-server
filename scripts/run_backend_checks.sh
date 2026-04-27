@@ -61,8 +61,11 @@ SUMMARY_ARGS=(--warn-ratio "$PERF_WARN_RATIO")
 if [[ "$PERF_WARN_FAIL" == "1" || "$PERF_WARN_FAIL" == "true" || "$PERF_WARN_FAIL" == "TRUE" ]]; then
   SUMMARY_ARGS+=(--fail-on-warn)
 fi
-if ! python3 "$ROOT_DIR/scripts/summarize_perf_reports.py" "${SUMMARY_ARGS[@]}"; then
-  summary_rc=$?
+set +e
+python3 "$ROOT_DIR/scripts/summarize_perf_reports.py" "${SUMMARY_ARGS[@]}"
+summary_rc=$?
+set -e
+if [[ "$summary_rc" -ne 0 ]]; then
   if [[ "$summary_rc" -eq 2 ]]; then
     fail_with_category "perf-gate" "$EXIT_PERF_GATE_FAILED" "性能门禁触发，检查最新 speedup 与历史均值偏差并评估是否需要优化或调整阈值。"
   fi
