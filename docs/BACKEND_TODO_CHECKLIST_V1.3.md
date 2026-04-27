@@ -19,10 +19,10 @@ _更新日期：2026-04-23_
 
 ### 1. 贡献流程标准化（受保护分支模型）
 
-- [ ] 在贡献文档明确“feature branch -> PR -> required checks -> merge”
-- [ ] 统一 PR 模板（变更范围、验证命令、风险说明、回滚方案）
-- [ ] 补充规则命名常见差异说明（workflow/job 展示名）
-- [ ] 增加最小自检命令清单（本地可复现实操）
+- [x] 在贡献文档明确“feature branch -> PR -> required checks -> merge”
+- [x] 统一 PR 模板（变更范围、验证命令、风险说明、回滚方案）
+- [x] 补充规则命名常见差异说明（workflow/job 展示名）
+- [x] 增加最小自检命令清单（本地可复现实操）
 
 **涉及模块**：`README.md`, `docs/BRANCH_PROTECTION_REQUIRED_CHECKS.md`, 新增 `docs/CONTRIBUTING_BACKEND.md`
 
@@ -35,9 +35,9 @@ _更新日期：2026-04-23_
 
 ### 2. Release 分支保护模板落地
 
-- [ ] 为 `release/*` 设计与 `main` 一致的 required checks 基线
-- [ ] 输出“主分支/发布分支”差异化规则建议（如是否必须 up-to-date）
-- [ ] 形成仓库设置清单（便于仓库管理员逐项核对）
+- [x] 为 `release/*` 设计与 `main` 一致的 required checks 基线
+- [x] 输出“主分支/发布分支”差异化规则建议（如是否必须 up-to-date）
+- [x] 形成仓库设置清单（便于仓库管理员逐项核对）
 
 **涉及模块**：`docs/BRANCH_PROTECTION_REQUIRED_CHECKS.md`, 新增 `docs/BRANCH_PROTECTION_RELEASE_TEMPLATE.md`
 
@@ -52,9 +52,9 @@ _更新日期：2026-04-23_
 
 ### 3. CI 失败分层与动作指引
 
-- [ ] 将 backend-checks 失败原因分层：构建失败 / 测试失败 / 性能门禁失败
-- [ ] 在 Job Summary 中输出“下一步处理建议”
-- [ ] 统一失败退出码语义并写入文档
+- [x] 将 backend-checks 失败原因分层：构建失败 / 测试失败 / 性能门禁失败
+- [x] 在 Job Summary 中输出“下一步处理建议”
+- [x] 统一失败退出码语义并写入文档
 
 **涉及模块**：`.github/workflows/backend-checks.yml`, `scripts/run_backend_checks.sh`, `scripts/summarize_perf_reports.py`, `README.md`
 
@@ -67,9 +67,9 @@ _更新日期：2026-04-23_
 
 ### 4. 性能门禁阈值治理与变更流程
 
-- [ ] 定义门禁阈值变更流程（谁可改、何时改、如何记录）
-- [ ] 增加阈值调整记录模板（含变更理由与影响评估）
-- [ ] 将阈值策略与趋势报告模板联动
+- [x] 定义门禁阈值变更流程（谁可改、何时改、如何记录）
+- [x] 增加阈值调整记录模板（含变更理由与影响评估）
+- [x] 将阈值策略与趋势报告模板联动
 
 **涉及模块**：`README.md`, `docs/PERFORMANCE_REPORT_TEMPLATE.md`, 新增 `docs/PERF_GATE_CHANGE_POLICY.md`
 
@@ -84,9 +84,9 @@ _更新日期：2026-04-23_
 
 ### 5. 例行巡检自动化脚本
 
-- [ ] 新增轻量巡检脚本（检查工作流文件、门禁参数、关键文档链接一致性）
-- [ ] 输出机器可读结果（0/1 + 简要报告）
-- [ ] 接入本地 pre-release 自检说明
+- [x] 新增轻量巡检脚本（检查工作流文件、门禁参数、关键文档链接一致性）
+- [x] 输出机器可读结果（0/1 + 简要报告）
+- [x] 接入本地 pre-release 自检说明
 
 **涉及模块**：新建 `scripts/audit_backend_governance.sh`, `README.md`
 
@@ -99,9 +99,9 @@ _更新日期：2026-04-23_
 
 ### 6. 文档版本一致性治理
 
-- [ ] 建立版本同步规则（README / RELEASE_NOTES / devlog）
-- [ ] 在发布前核对版本号、日期、关键特性摘要一致
-- [ ] 新增“发布文档核对清单”
+- [x] 建立版本同步规则（README / RELEASE_NOTES / devlog）
+- [x] 在发布前核对版本号、日期、关键特性摘要一致
+- [x] 新增“发布文档核对清单”
 
 **涉及模块**：`README.md`, `RELEASE_NOTES.md`, `docs/devlog.md`, 新增 `docs/RELEASE_DOC_CHECKLIST.md`
 
@@ -122,6 +122,8 @@ _更新日期：2026-04-23_
 
 ## 进度记录
 
-- [ ] 2026-04-W4：v1.3 清单创建
-- [ ] 2026-04-W5：P0 完成
-- [ ] 2026-05-W1：P1 完成
+- [x] 2026-04-W4：v1.3 清单创建
+- [x] 2026-04-W5：P0 完成
+- [x] 2026-05-W1：P1 完成（含 P1-3、P1-4）
+- [x] 2026-05-W2：P2-5 完成
+- [x] 2026-05-W2：P2-6 完成

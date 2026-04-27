@@ -103,7 +103,19 @@ frontend/
 
 ## 🔗 后端连接
 
-确保后端服务器运行在 `ws://localhost:8080`
+默认情况下，前端连接同源的 `/ws`。在 HTTPS 页面中会自动切换为 WSS。
+
+如果你需要手动指定后端地址，可以设置 `VITE_WS_URL`，例如：
+
+```bash
+VITE_WS_URL=ws://localhost:8080/ws
+```
+
+或在公网部署时使用：
+
+```bash
+VITE_WS_URL=wss://your-domain.com/ws
+```
 
 ```bash
 # 启动后端

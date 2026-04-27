@@ -1,0 +1,38 @@
+groups:
+  - name: chat-server-alerts
+    rules:
+      - alert: BackendHealthcheckFailed
+        expr: probe_success{job="blackbox-http", instance="http://backend:8080/health"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend /health 探活失败"
+          description: "后端健康检查已连续 2 分钟失败，建议立即排查容器与数据库状态。"
+
+      - alert: FrontendHealthcheckFailed
+        expr: probe_success{job="blackbox-http", instance="https://frontend:443/health"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Frontend /health 探活失败"
+          description: "前端健康检查已连续 2 分钟失败，建议检查 Nginx 与证书挂载。"
+
+      - alert: HostCpuUsageHigh
+        expr: (100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)) > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "主机 CPU 使用率过高"
+          description: "主机 CPU 使用率已持续超过 85%，建议排查热点请求或容器资源限制。"
+
+      - alert: HostMemoryUsageHigh
+        expr: ((1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100) > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "主机内存使用率过高"
+          description: "主机内存使用率已持续超过 90%，建议排查内存泄漏或调整容量。"

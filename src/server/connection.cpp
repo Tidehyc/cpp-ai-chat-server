@@ -10,6 +10,7 @@
 #include "friend/friend_manager.h"
 #include "friend/offline_message_delivery.h"
 #include "utils/logger.h"
+#include "utils/rate_limiter.h"
 #include <nlohmann/json.hpp>
 #include <iostream>
 #include <algorithm>
@@ -18,6 +19,7 @@
 #include <thread>
 #include <regex>
 #include <mutex>
+#include <atomic>
 
 namespace chat
 {
@@ -25,6 +27,23 @@ namespace chat
 
     namespace
     {
+        RateLimiter g_login_ip_limiter(20, std::chrono::seconds(300));
+        RateLimiter g_login_user_limiter(8, std::chrono::seconds(300));
+        RateLimiter g_command_ip_limiter(240, std::chrono::seconds(60));
+        RateLimiter g_ai_ip_limiter(30, std::chrono::seconds(60));
+        RateLimiter g_ai_user_limiter(12, std::chrono::seconds(60));
+        std::atomic<uint64_t> g_request_seq{0};
+
+        std::string next_request_id(const std::string &prefix)
+        {
+            const uint64_t seq = g_request_seq.fetch_add(1, std::memory_order_relaxed) + 1;
+            return prefix + "-" + std::to_string(seq);
+        }
+
+        std::string build_log_prefix(const std::string &module, const std::string &request_id, uint64_t connection_id)
+        {
+            return "module=" + module + " request_id=" + request_id + " connection_id=" + std::to_string(connection_id) + " ";
+        }
 
         std::string summarize_command_for_log(const std::string &input)
         {
@@ -50,6 +69,11 @@ namespace chat
             }
 
             return "chat_message len=" + std::to_string(input.size());
+        }
+
+        bool is_http_healthcheck_request(const std::string &request)
+        {
+            return request.rfind("GET /health ", 0) == 0;
         }
 
     } // namespace
@@ -213,6 +237,87 @@ namespace chat
         send(JsonParser::stringify(msg));
     }
 
+    std::string Connection::get_remote_ip() const
+    {
+        boost::system::error_code ec;
+        const auto endpoint = socket_.remote_endpoint(ec);
+        if (ec)
+        {
+            return "unknown";
+        }
+        return endpoint.address().to_string();
+    }
+
+    bool Connection::allow_command_rate(const std::string &input, const std::string &request_id)
+    {
+        if (input.empty())
+        {
+            return true;
+        }
+
+        const std::string ip = get_remote_ip();
+        if (!g_command_ip_limiter.allow("cmd_ip:" + ip))
+        {
+            Logger::warn(build_log_prefix("connection", request_id, id_) + "event=command_rate_limited ip=" + ip);
+            send_system_message("请求过于频繁，请 1 分钟后再试。");
+            return false;
+        }
+
+        return true;
+    }
+
+    bool Connection::try_handle_http_healthcheck()
+    {
+        if (!is_http_healthcheck_request(handshake_buffer_))
+        {
+            return false;
+        }
+
+        const std::string request_id = next_request_id("health");
+
+        bool db_ok = (db_ && db_->get_db() != nullptr);
+        if (db_ok)
+        {
+            sqlite3_stmt *stmt = nullptr;
+            db_ok = (sqlite3_prepare_v2(db_->get_db(), "SELECT 1", -1, &stmt, nullptr) == SQLITE_OK);
+            if (stmt)
+            {
+                sqlite3_finalize(stmt);
+            }
+        }
+
+        json payload = {
+            {"status", db_ok ? "ok" : "degraded"},
+            {"service", "chat_server"},
+            {"db", db_ok},
+            {"active_connections", static_cast<int>(snapshot_all_connections().size())}};
+        const std::string body = payload.dump();
+
+        std::ostringstream response;
+        response << "HTTP/1.1 200 OK\r\n"
+                 << "Content-Type: application/json\r\n"
+                 << "Content-Length: " << body.size() << "\r\n"
+                 << "Connection: close\r\n"
+                 << "\r\n"
+                 << body;
+
+        auto self = shared_from_this();
+        auto response_data = std::make_shared<std::string>(response.str());
+        boost::asio::async_write(
+            socket_,
+            boost::asio::buffer(*response_data),
+            [this, self, response_data](boost::system::error_code, std::size_t)
+            {
+                boost::system::error_code ignored;
+                socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored);
+                socket_.close(ignored);
+                state_ = ConnectionState::CLOSED;
+            });
+
+        Logger::info(build_log_prefix("health", request_id, id_) + "event=healthcheck_served db_ok=" + std::string(db_ok ? "true" : "false"));
+        return true;
+    }
+
     void Connection::do_read_handshake()
     {
         auto self = shared_from_this();
@@ -229,10 +334,32 @@ namespace chat
                     return;
                 }
 
+                if (try_handle_http_healthcheck())
+                {
+                    return;
+                }
+
                 if (!WebSocketParser::is_handshake_request(handshake_buffer_))
                 {
-                    Logger::error("Connection " + std::to_string(id_) + " not a WebSocket handshake");
-                    close();
+                    Logger::warn("Connection " + std::to_string(id_) + " non-WebSocket request rejected");
+                    static const std::string kUpgradeRequired =
+                        "HTTP/1.1 426 Upgrade Required\r\n"
+                        "Content-Type: text/plain\r\n"
+                        "Connection: close\r\n"
+                        "Content-Length: 17\r\n"
+                        "\r\n"
+                        "Upgrade Required\n";
+
+                    boost::asio::async_write(
+                        socket_,
+                        boost::asio::buffer(kUpgradeRequired),
+                        [this, self](boost::system::error_code, std::size_t)
+                        {
+                            boost::system::error_code ignored;
+                            socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored);
+                            socket_.close(ignored);
+                            state_ = ConnectionState::CLOSED;
+                        });
                     return;
                 }
 
@@ -397,10 +524,16 @@ namespace chat
 
     void Connection::handle_command(const std::string &input)
     {
-        Logger::info("Connection " + std::to_string(id_) + " command: " + summarize_command_for_log(input));
+        const std::string request_id = next_request_id("cmd");
+        Logger::info(build_log_prefix("connection", request_id, id_) + "event=command_received summary=" + summarize_command_for_log(input));
 
         if (input.empty())
             return;
+
+        if (!allow_command_rate(input, request_id))
+        {
+            return;
+        }
 
         // 仅在输入看起来像 JSON 时才尝试解析，避免普通文本触发错误递归。
         if (!input.empty() && (input[0] == '{' || input[0] == '['))
@@ -692,14 +825,33 @@ namespace chat
 
     void Connection::cmd_login(const std::vector<std::string> &args)
     {
+        const std::string request_id = next_request_id("auth");
+
         if (args.size() < 2)
         {
+            Logger::warn(build_log_prefix("auth", request_id, id_) + "event=login_invalid_args");
             send_system_message("用法：/login <用户名> <密码>");
             return;
         }
 
         std::string username = args[0];
         std::string password = args[1];
+        const std::string ip = get_remote_ip();
+        Logger::info(build_log_prefix("auth", request_id, id_) + "event=login_attempt username=" + username + " ip=" + ip);
+
+        if (!g_login_ip_limiter.allow("login_ip:" + ip))
+        {
+            Logger::warn(build_log_prefix("auth", request_id, id_) + "event=login_rate_limited scope=ip ip=" + ip);
+            send_system_message("登录尝试过于频繁，请稍后重试。");
+            return;
+        }
+
+        if (!g_login_user_limiter.allow("login_user:" + username))
+        {
+            Logger::warn(build_log_prefix("auth", request_id, id_) + "event=login_rate_limited scope=username username=" + username);
+            send_system_message("登录尝试过于频繁，请稍后重试。");
+            return;
+        }
 
         User user;
         LoginResult result = user_manager_->login(username, password, user);
@@ -743,13 +895,16 @@ namespace chat
 
             // 通知好友上线
             notify_friend_online(user.id, user.username);
+            Logger::info(build_log_prefix("auth", request_id, id_) + "event=login_success user_id=" + std::to_string(user.id) + " username=" + username);
         }
         else if (result == LoginResult::USER_NOT_FOUND)
         {
+            Logger::warn(build_log_prefix("auth", request_id, id_) + "event=login_failed reason=user_not_found username=" + username);
             send_system_message("登录失败：用户不存在。");
         }
         else
         {
+            Logger::warn(build_log_prefix("auth", request_id, id_) + "event=login_failed reason=wrong_password username=" + username);
             send_system_message("登录失败：密码错误。");
         }
     }
@@ -1944,6 +2099,24 @@ namespace chat
     void Connection::send_ai_response(const std::string &prompt, const std::string &user_message,
                                       const std::vector<AIMessage> &context)
     {
+        const std::string request_id = next_request_id("ai");
+        const std::string ip = get_remote_ip();
+        const std::string user_key = "ai_user:" + std::to_string(session_.user_id);
+
+        if (!g_ai_ip_limiter.allow("ai_ip:" + ip))
+        {
+            Logger::warn(build_log_prefix("ai", request_id, id_) + "event=ai_rate_limited scope=ip ip=" + ip);
+            send_system_message("AI 请求过于频繁，请稍后重试。");
+            return;
+        }
+
+        if (!g_ai_user_limiter.allow(user_key))
+        {
+            Logger::warn(build_log_prefix("ai", request_id, id_) + "event=ai_rate_limited scope=user user_id=" + std::to_string(session_.user_id));
+            send_system_message("AI 请求过于频繁，请稍后重试。");
+            return;
+        }
+
         // 发送"正在思考"提示
         send_system_message("AI 思考中...");
 
@@ -1952,7 +2125,7 @@ namespace chat
         context_with_prompt.push_back(AIMessage{"system", prompt});
         context_with_prompt.insert(context_with_prompt.end(), context.begin(), context.end());
 
-        Logger::info("Sending AI response, context_count=" + std::to_string(context_with_prompt.size()));
+        Logger::info(build_log_prefix("ai", request_id, id_) + "event=ai_request ip=" + ip + " user_id=" + std::to_string(session_.user_id) + " context_count=" + std::to_string(context_with_prompt.size()) + " message_len=" + std::to_string(user_message.size()));
 
         // 使用异步 AI 调用（不阻塞连接）
         auto self = shared_from_this();

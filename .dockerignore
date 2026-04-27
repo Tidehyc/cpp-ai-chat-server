@@ -1,0 +1,30 @@
+# Build artifacts
+build/
+frontend/dist/
+frontend/node_modules/
+
+# Git metadata
+.git/
+.gitignore
+
+# Editor and local tooling
+.vscode/
+.qwen/
+
+# Docs and records are not needed in the backend image build context
+docs/
+monitoring/
+
+# Local data and logs
+*.db
+*.log
+chat.db
+chat_server.log
+
+# Python cache and test artifacts
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Frontend build caches
+frontend/.vite/

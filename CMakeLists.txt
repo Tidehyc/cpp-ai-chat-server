@@ -49,6 +49,7 @@ set(SOURCES
     src/ai/ai_client.cpp
     src/storage/database.cpp
     src/utils/logger.cpp
+    src/utils/rate_limiter.cpp
     src/user/user_manager.cpp
     src/room/room_manager.cpp
     src/preset/preset_manager.cpp
@@ -72,6 +73,7 @@ set(HEADERS
     src/ai/api_config.h
     src/storage/database.h
     src/utils/logger.h
+    src/utils/rate_limiter.h
     src/user/user_manager.h
     src/room/room_manager.h
     src/preset/preset_manager.h
@@ -116,13 +118,16 @@ target_link_libraries(ws_client PRIVATE ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} 
 # ========== 单元测试 ==========
 enable_testing()
 
-# 下载 GoogleTest
-include(FetchContent)
-FetchContent_Declare(
-    googletest
-    URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz
-)
-FetchContent_MakeAvailable(googletest)
+# 查找或下载 GoogleTest
+find_package(GTest QUIET)
+if(NOT GTest_FOUND)
+    include(FetchContent)
+    FetchContent_Declare(
+        googletest
+        URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz
+    )
+    FetchContent_MakeAvailable(googletest)
+endif()
 
 # 测试可执行文件
 add_executable(chat_server_test
@@ -134,11 +139,13 @@ add_executable(chat_server_test
     tests/test_ai_client.cpp
     tests/test_offline_message_delivery.cpp
     tests/test_conversation.cpp
+    tests/test_rate_limiter.cpp
     src/storage/database.cpp
     src/ai/ai_client.cpp
     src/user/user_manager.cpp
     src/room/room_manager.cpp
     src/utils/logger.cpp
+    src/utils/rate_limiter.cpp
     src/history/message_history.cpp
     src/conversation/conversation.cpp
     src/protocol/message.cpp

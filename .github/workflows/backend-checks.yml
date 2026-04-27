@@ -53,7 +53,55 @@ jobs:
           echo "Resolved PERF_WARN_FAIL=${PERF_WARN_FAIL} (event=${GITHUB_EVENT_NAME}, ref=${GITHUB_REF}, base_ref=${GITHUB_BASE_REF})"
 
       - name: Run backend checks
-        run: bash scripts/run_backend_checks.sh
+        id: backend_checks
+        run: |
+          set +e
+          bash scripts/run_backend_checks.sh
+          exit_code=$?
+          echo "exit_code=${exit_code}" >> "$GITHUB_OUTPUT"
+
+          category="ok"
+          hint="全部检查通过。"
+          case "$exit_code" in
+            0)
+              category="ok"
+              hint="全部检查通过。"
+              ;;
+            11|21)
+              category="build"
+              hint="先修复构建错误：确认依赖已安装、定位首个编译报错，再重跑脚本。"
+              ;;
+            31)
+              category="test"
+              hint="先看失败用例日志，最小化复现后修复，再执行 CTest 回归。"
+              ;;
+            41)
+              category="perf"
+              hint="性能基准或汇总失败：检查 benchmark 输出文件和 Python 汇总脚本输入。"
+              ;;
+            51)
+              category="perf-gate"
+              hint="性能门禁触发：检查最新 speedup 是否低于阈值，必要时优化 SQL/索引后重测。"
+              ;;
+            *)
+              category="unknown"
+              hint="未知失败，请查看 backend-checks 日志首个错误位置。"
+              ;;
+          esac
+
+          echo "failure_category=${category}" >> "$GITHUB_OUTPUT"
+          echo "failure_hint=${hint}" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Publish backend-checks status to job summary
+        if: always()
+        run: |
+          echo "## Backend Checks Status" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- exit_code: ${{ steps.backend_checks.outputs.exit_code }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- category: ${{ steps.backend_checks.outputs.failure_category }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- next_action: ${{ steps.backend_checks.outputs.failure_hint }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Show benchmark summary
         if: always()
@@ -76,3 +124,9 @@ jobs:
             docs/perf_reports/message_history_benchmark_summary.md
             docs/perf_reports/message_history_benchmark_summary.csv
           if-no-files-found: warn
+
+      - name: Fail job when backend checks failed
+        if: ${{ steps.backend_checks.outputs.exit_code != '0' }}
+        run: |
+          echo "backend-checks failed: category=${{ steps.backend_checks.outputs.failure_category }}, exit_code=${{ steps.backend_checks.outputs.exit_code }}"
+          exit 1

@@ -84,6 +84,9 @@ namespace chat
         void do_write();
         void on_message(const Message &msg);
         void handle_websocket_frame(const WebSocketFrame &frame);
+        std::string get_remote_ip() const;
+        bool allow_command_rate(const std::string &input, const std::string &request_id);
+        bool try_handle_http_healthcheck();
 
         // 命令处理
         void handle_command(const std::string &input);

@@ -1,12 +1,16 @@
 # Message History Benchmark Trend Summary
 
-- report_count: 8
-- latest_report: message_history_benchmark_20260423_144753.txt
-- latest_speedup: 164.90x
-- avg_speedup: 120.03x
+- report_count: 9
+- latest_report: message_history_benchmark_20260425_085000.txt
+- latest_speedup: 59.27x
+- avg_speedup: 113.28x
 - min_speedup: 33.63x
 - max_speedup: 213.32x
 - warn_ratio: 80%
+
+## Alerts
+
+- WARNING: latest_speedup 59.27x is below 80% of average speedup (90.62x)
 
 ## Trend Table
 
@@ -20,6 +24,7 @@
 | 20260423_091739 | 50000 | 100 | 51.58 | 2876.59 | 55.77x | message_history_benchmark_20260423_091739.txt |
 | 20260423_144741 | 50000 | 100 | 32.65 | 4149.86 | 127.11x | message_history_benchmark_20260423_144741.txt |
 | 20260423_144753 | 50000 | 100 | 22.03 | 3632.70 | 164.90x | message_history_benchmark_20260423_144753.txt |
+| 20260425_085000 | 50000 | 100 | 127.22 | 7539.98 | 59.27x | message_history_benchmark_20260425_085000.txt |
 
 ## Notes
 

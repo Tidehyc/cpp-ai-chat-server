@@ -35,6 +35,12 @@ logs/
 # Docker
 docker-compose.override.yml
 chat_data/
+nginx/ssl/*.pem
+
+# 备份与本地产物
+backups/
+scripts/__pycache__/
+*.sqlite3
 
 # IDE
 .vscode/
