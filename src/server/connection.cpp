@@ -27,6 +27,21 @@ namespace chat
 
     namespace
     {
+        constexpr const char *ERR_CONNECTION_RATE_LIMIT = "CONNECTION_RATE_LIMITED";
+        constexpr const char *ERR_MESSAGE_NOT_AUTHENTICATED = "MESSAGE_NOT_AUTHENTICATED";
+        constexpr const char *ERR_LOGIN_INVALID_ARGS = "AUTH_LOGIN_INVALID_ARGS";
+        constexpr const char *ERR_LOGIN_RATE_LIMIT_IP = "AUTH_LOGIN_RATE_LIMIT_IP";
+        constexpr const char *ERR_LOGIN_RATE_LIMIT_USER = "AUTH_LOGIN_RATE_LIMIT_USER";
+        constexpr const char *ERR_LOGIN_USER_NOT_FOUND = "AUTH_LOGIN_USER_NOT_FOUND";
+        constexpr const char *ERR_LOGIN_WRONG_PASSWORD = "AUTH_LOGIN_WRONG_PASSWORD";
+        constexpr const char *ERR_LOGIN_BANNED = "AUTH_LOGIN_BANNED";
+        constexpr const char *ERR_AI_RATE_LIMIT_IP = "AI_RATE_LIMIT_IP";
+        constexpr const char *ERR_AI_RATE_LIMIT_USER = "AI_RATE_LIMIT_USER";
+        constexpr const char *ERR_DB_OFFLINE_TX_FAILED = "DB_OFFLINE_TX_FAILED";
+        constexpr const char *ERR_MODERATION_NOT_AUTHORIZED = "MODERATION_NOT_AUTHORIZED";
+        constexpr const char *ERR_MODERATION_INVALID_ARGS = "MODERATION_INVALID_ARGS";
+        constexpr const char *ERR_MODERATION_TARGET_NOT_FOUND = "MODERATION_TARGET_NOT_FOUND";
+
         RateLimiter g_login_ip_limiter(20, std::chrono::seconds(300));
         RateLimiter g_login_user_limiter(8, std::chrono::seconds(300));
         RateLimiter g_command_ip_limiter(240, std::chrono::seconds(60));
@@ -175,7 +190,7 @@ namespace chat
         auto frame = WebSocketParser::encode(message);
         write_queue_.push_back(frame);
 
-        if (!is_writing_)
+        if (!is_writing_ && socket_.is_open())
         {
             do_write();
         }
@@ -188,28 +203,34 @@ namespace chat
 
         state_ = ConnectionState::CLOSING;
 
-        Logger::info("Connection " + std::to_string(id_) + " closing, user_id=" + std::to_string(session_.user_id) + ", username=" + session_.username);
+        Logger::info("Connection " + std::to_string(id_) + " closing, user_id=" + std::to_string(session_.user_id));
 
         // 如果已登录，标记为离线并通知好友
         if (session_.is_authenticated())
         {
-            user_manager_->set_user_online(session_.user_id, false);
-            user_manager_->update_status(session_.user_id, "offline"); // 更新数据库状态为 offline
+            if (user_manager_)
+            {
+                user_manager_->set_user_online(session_.user_id, false);
+                user_manager_->update_status(session_.user_id, "offline"); // 更新数据库状态为 offline
+            }
 
             // 获取用户的好友列表并通知他们
-            auto friends = friend_manager_->get_friends(session_.user_id);
-            Logger::info("Connection " + std::to_string(id_) + " has " + std::to_string(friends.size()) + " friends to notify");
-
-            for (const auto &f : friends)
+            if (friend_manager_)
             {
-                Logger::info("Notifying friend_id=" + std::to_string(f.friend_id) + ", username=" + f.friend_username);
-                auto conn = find_connection_by_user_id(f.friend_id);
-                if (conn)
+                auto friends = friend_manager_->get_friends(session_.user_id);
+                Logger::info("Connection " + std::to_string(id_) + " has " + std::to_string(friends.size()) + " friends to notify");
+
+                for (const auto &f : friends)
                 {
-                    // 发送好友下线通知
-                    std::string json = "{\"type\":\"friend_offline\",\"username\":\"" + session_.username + "\",\"status\":\"offline\"}";
-                    Logger::info("Sending offline notification: " + json);
-                    conn->send(json);
+                    Logger::info("Notifying friend_id=" + std::to_string(f.friend_id));
+                    auto conn = find_connection_by_user_id(f.friend_id);
+                    if (conn)
+                    {
+                        // 发送好友下线通知
+                        std::string json = "{\"type\":\"friend_offline\",\"username\":\"" + session_.username + "\",\"status\":\"offline\"}";
+                        Logger::info("Sending offline notification payload_bytes=" + std::to_string(json.size()));
+                        conn->send(json);
+                    }
                 }
             }
         }
@@ -237,6 +258,22 @@ namespace chat
         send(JsonParser::stringify(msg));
     }
 
+    void Connection::send_error_message(const std::string &error_code,
+                                        const std::string &content,
+                                        const std::string &request_id,
+                                        const std::string &module)
+    {
+        json payload = {
+            {"type", "system"},
+            {"level", "error"},
+            {"content", content},
+            {"error_code", error_code},
+            {"request_id", request_id}};
+
+        Logger::warn(build_log_prefix(module, request_id, id_) + "event=error_response error_code=" + error_code);
+        send(payload.dump());
+    }
+
     std::string Connection::get_remote_ip() const
     {
         boost::system::error_code ec;
@@ -258,8 +295,11 @@ namespace chat
         const std::string ip = get_remote_ip();
         if (!g_command_ip_limiter.allow("cmd_ip:" + ip))
         {
-            Logger::warn(build_log_prefix("connection", request_id, id_) + "event=command_rate_limited ip=" + ip);
-            send_system_message("请求过于频繁，请 1 分钟后再试。");
+            Logger::warn(build_log_prefix("connection", request_id, id_) + "event=command_rate_limited error_code=" + std::string(ERR_CONNECTION_RATE_LIMIT) + " ip=" + ip);
+            send_error_message(ERR_CONNECTION_RATE_LIMIT,
+                               "请求过于频繁，请 1 分钟后再试。",
+                               request_id,
+                               "connection");
             return false;
         }
 
@@ -583,6 +623,26 @@ namespace chat
         {
             cmd_status(args);
         }
+        else if (cmd_name == "ban")
+        {
+            cmd_ban(args);
+        }
+        else if (cmd_name == "unban")
+        {
+            cmd_unban(args);
+        }
+        else if (cmd_name == "modlog")
+        {
+            cmd_modlog(args);
+        }
+        else if (cmd_name == "report")
+        {
+            cmd_report(args);
+        }
+        else if (cmd_name == "announce")
+        {
+            cmd_announce(args);
+        }
         else if (cmd_name == "rooms")
         {
             cmd_rooms(args);
@@ -673,12 +733,16 @@ namespace chat
 
     void Connection::handle_chat_message(const std::string &content)
     {
+        const std::string request_id = next_request_id("msg");
         Logger::debug("handle_chat_message called, user_id=" + std::to_string(session_.user_id) + ", room=" + session_.current_room + ", content_len=" + std::to_string(content.size()));
 
         if (!session_.is_authenticated())
         {
-            Logger::info("User not authenticated, sending login prompt");
-            send_system_message("请先登录。使用 /register <用户名> <密码> 注册，或 /login <用户名> <密码> 登录。");
+            Logger::warn(build_log_prefix("message", request_id, id_) + "event=message_rejected error_code=" + std::string(ERR_MESSAGE_NOT_AUTHENTICATED));
+            send_error_message(ERR_MESSAGE_NOT_AUTHENTICATED,
+                               "请先登录。使用 /register <用户名> <密码> 注册，或 /login <用户名> <密码> 登录。",
+                               request_id,
+                               "message");
             return;
         }
 
@@ -829,8 +893,11 @@ namespace chat
 
         if (args.size() < 2)
         {
-            Logger::warn(build_log_prefix("auth", request_id, id_) + "event=login_invalid_args");
-            send_system_message("用法：/login <用户名> <密码>");
+            Logger::warn(build_log_prefix("auth", request_id, id_) + "event=login_invalid_args error_code=" + std::string(ERR_LOGIN_INVALID_ARGS));
+            send_error_message(ERR_LOGIN_INVALID_ARGS,
+                               "用法：/login <用户名> <密码>",
+                               request_id,
+                               "auth");
             return;
         }
 
@@ -841,15 +908,21 @@ namespace chat
 
         if (!g_login_ip_limiter.allow("login_ip:" + ip))
         {
-            Logger::warn(build_log_prefix("auth", request_id, id_) + "event=login_rate_limited scope=ip ip=" + ip);
-            send_system_message("登录尝试过于频繁，请稍后重试。");
+            Logger::warn(build_log_prefix("auth", request_id, id_) + "event=login_rate_limited scope=ip error_code=" + std::string(ERR_LOGIN_RATE_LIMIT_IP) + " ip=" + ip);
+            send_error_message(ERR_LOGIN_RATE_LIMIT_IP,
+                               "登录尝试过于频繁，请稍后重试。",
+                               request_id,
+                               "auth");
             return;
         }
 
         if (!g_login_user_limiter.allow("login_user:" + username))
         {
-            Logger::warn(build_log_prefix("auth", request_id, id_) + "event=login_rate_limited scope=username username=" + username);
-            send_system_message("登录尝试过于频繁，请稍后重试。");
+            Logger::warn(build_log_prefix("auth", request_id, id_) + "event=login_rate_limited scope=username error_code=" + std::string(ERR_LOGIN_RATE_LIMIT_USER) + " username=" + username);
+            send_error_message(ERR_LOGIN_RATE_LIMIT_USER,
+                               "登录尝试过于频繁，请稍后重试。",
+                               request_id,
+                               "auth");
             return;
         }
 
@@ -863,6 +936,7 @@ namespace chat
 
             session_.user_id = user.id;
             session_.username = user.username;
+            session_.role = user.role;
             session_.current_preset = user.current_preset;
             session_.status = "online";
             state_ = ConnectionState::ACTIVE;
@@ -899,13 +973,27 @@ namespace chat
         }
         else if (result == LoginResult::USER_NOT_FOUND)
         {
-            Logger::warn(build_log_prefix("auth", request_id, id_) + "event=login_failed reason=user_not_found username=" + username);
-            send_system_message("登录失败：用户不存在。");
+            Logger::warn(build_log_prefix("auth", request_id, id_) + "event=login_failed reason=user_not_found error_code=" + std::string(ERR_LOGIN_USER_NOT_FOUND) + " username=" + username);
+            send_error_message(ERR_LOGIN_USER_NOT_FOUND,
+                               "登录失败：用户不存在。",
+                               request_id,
+                               "auth");
+        }
+        else if (result == LoginResult::BANNED)
+        {
+            Logger::warn(build_log_prefix("auth", request_id, id_) + "event=login_failed reason=banned error_code=" + std::string(ERR_LOGIN_BANNED) + " username=" + username);
+            send_error_message(ERR_LOGIN_BANNED,
+                               "登录失败：账号已被封禁。",
+                               request_id,
+                               "auth");
         }
         else
         {
-            Logger::warn(build_log_prefix("auth", request_id, id_) + "event=login_failed reason=wrong_password username=" + username);
-            send_system_message("登录失败：密码错误。");
+            Logger::warn(build_log_prefix("auth", request_id, id_) + "event=login_failed reason=wrong_password error_code=" + std::string(ERR_LOGIN_WRONG_PASSWORD) + " username=" + username);
+            send_error_message(ERR_LOGIN_WRONG_PASSWORD,
+                               "登录失败：密码错误。",
+                               request_id,
+                               "auth");
         }
     }
 
@@ -959,6 +1047,326 @@ namespace chat
         }
     }
 
+    void Connection::cmd_ban(const std::vector<std::string> &args)
+    {
+        const std::string request_id = next_request_id("mod");
+        if (!session_.is_authenticated())
+        {
+            send_error_message(ERR_MODERATION_NOT_AUTHORIZED,
+                               "请先登录。",
+                               request_id,
+                               "moderation");
+            return;
+        }
+
+        if (session_.role != "admin")
+        {
+            Logger::warn(build_log_prefix("moderation", request_id, id_) + "event=ban_denied error_code=" + std::string(ERR_MODERATION_NOT_AUTHORIZED) + " operator=" + session_.username);
+            send_error_message(ERR_MODERATION_NOT_AUTHORIZED,
+                               "仅管理员可封禁账号。",
+                               request_id,
+                               "moderation");
+            return;
+        }
+
+        if (args.size() < 2)
+        {
+            send_error_message(ERR_MODERATION_INVALID_ARGS,
+                               "用法：/ban <用户名>",
+                               request_id,
+                               "moderation");
+            return;
+        }
+
+        const std::string target_username = args[1];
+        User target = user_manager_->get_user_by_name(target_username);
+        if (!target.is_valid())
+        {
+            send_error_message(ERR_MODERATION_TARGET_NOT_FOUND,
+                               "用户不存在：" + target_username,
+                               request_id,
+                               "moderation");
+            return;
+        }
+
+        if (target.status == "banned")
+        {
+            send_system_message("账号已处于封禁状态：" + target_username);
+            return;
+        }
+
+        const bool status_ok = user_manager_->update_status(target.id, "banned");
+        if (!status_ok)
+        {
+            send_system_message("封禁失败：无法更新用户状态。");
+            return;
+        }
+
+        user_manager_->set_user_online(target.id, false);
+        if (db_)
+        {
+            db_->save_moderation_event(session_.username, target.username, "ban", "manual ban");
+        }
+        auto conn = find_connection_by_user_id(target.id);
+        if (conn && conn.get() != this)
+        {
+            conn->send_system_message("账号已被管理员封禁，连接即将关闭。");
+            conn->close();
+        }
+
+        Logger::info(build_log_prefix("moderation", request_id, id_) + "event=ban_user target=" + target_username + " target_id=" + std::to_string(target.id));
+        send_system_message("已封禁账号：" + target_username);
+    }
+
+    void Connection::cmd_unban(const std::vector<std::string> &args)
+    {
+        const std::string request_id = next_request_id("mod");
+        if (!session_.is_authenticated())
+        {
+            send_error_message(ERR_MODERATION_NOT_AUTHORIZED,
+                               "请先登录。",
+                               request_id,
+                               "moderation");
+            return;
+        }
+
+        if (session_.role != "admin")
+        {
+            Logger::warn(build_log_prefix("moderation", request_id, id_) + "event=unban_denied error_code=" + std::string(ERR_MODERATION_NOT_AUTHORIZED) + " operator=" + session_.username);
+            send_error_message(ERR_MODERATION_NOT_AUTHORIZED,
+                               "仅管理员可解封账号。",
+                               request_id,
+                               "moderation");
+            return;
+        }
+
+        if (args.size() < 2)
+        {
+            send_error_message(ERR_MODERATION_INVALID_ARGS,
+                               "用法：/unban <用户名>",
+                               request_id,
+                               "moderation");
+            return;
+        }
+
+        const std::string target_username = args[1];
+        User target = user_manager_->get_user_by_name(target_username);
+        if (!target.is_valid())
+        {
+            send_error_message(ERR_MODERATION_TARGET_NOT_FOUND,
+                               "用户不存在：" + target_username,
+                               request_id,
+                               "moderation");
+            return;
+        }
+
+        if (target.status != "banned")
+        {
+            send_system_message("账号当前未处于封禁状态：" + target_username);
+            return;
+        }
+
+        const bool status_ok = user_manager_->update_status(target.id, "offline");
+        if (!status_ok)
+        {
+            send_system_message("解封失败：无法更新用户状态。");
+            return;
+        }
+
+        if (db_)
+        {
+            db_->save_moderation_event(session_.username, target.username, "unban", "manual unban");
+        }
+
+        Logger::info(build_log_prefix("moderation", request_id, id_) + "event=unban_user target=" + target_username + " target_id=" + std::to_string(target.id));
+        send_system_message("已解封账号：" + target_username);
+    }
+
+    void Connection::cmd_modlog(const std::vector<std::string> &args)
+    {
+        const std::string request_id = next_request_id("mod");
+        if (!session_.is_authenticated())
+        {
+            send_error_message(ERR_MODERATION_NOT_AUTHORIZED,
+                               "请先登录。",
+                               request_id,
+                               "moderation");
+            return;
+        }
+
+        if (session_.role != "admin")
+        {
+            Logger::warn(build_log_prefix("moderation", request_id, id_) + "event=modlog_denied error_code=" + std::string(ERR_MODERATION_NOT_AUTHORIZED) + " operator=" + session_.username);
+            send_error_message(ERR_MODERATION_NOT_AUTHORIZED,
+                               "仅管理员可查看处罚记录。",
+                               request_id,
+                               "moderation");
+            return;
+        }
+
+        int limit = 10;
+        if (!args.empty())
+        {
+            try
+            {
+                limit = std::max(1, std::min(50, std::stoi(args[0])));
+            }
+            catch (...)
+            {
+                send_error_message(ERR_MODERATION_INVALID_ARGS,
+                                   "用法：/modlog [数量]",
+                                   request_id,
+                                   "moderation");
+                return;
+            }
+        }
+
+        if (!db_)
+        {
+            send_system_message("处罚记录不可用：数据库未初始化。");
+            return;
+        }
+
+        auto events = db_->get_recent_moderation_events(limit);
+        if (events.empty())
+        {
+            send_system_message("暂无处罚记录。\n");
+            return;
+        }
+
+        send_system_message("=== 最近处罚记录 ===");
+        for (const auto &event : events)
+        {
+            std::string line = event.action + " | actor=" + event.actor + " | target=" + event.target;
+            if (!event.reason.empty())
+            {
+                line += " | reason=" + event.reason;
+            }
+            line += " | ts=" + std::to_string(event.created_at);
+            send_system_message(line);
+        }
+    }
+
+    void Connection::cmd_report(const std::vector<std::string> &args)
+    {
+        const std::string request_id = next_request_id("mod");
+        if (!session_.is_authenticated())
+        {
+            send_error_message(ERR_MODERATION_NOT_AUTHORIZED,
+                               "请先登录。",
+                               request_id,
+                               "moderation");
+            return;
+        }
+
+        if (args.size() < 2)
+        {
+            send_error_message(ERR_MODERATION_INVALID_ARGS,
+                               "用法：/report <用户名> <原因>",
+                               request_id,
+                               "moderation");
+            return;
+        }
+
+        const std::string target_username = args[0];
+        User target = user_manager_->get_user_by_name(target_username);
+        if (!target.is_valid())
+        {
+            send_error_message(ERR_MODERATION_TARGET_NOT_FOUND,
+                               "用户不存在：" + target_username,
+                               request_id,
+                               "moderation");
+            return;
+        }
+
+        std::string reason;
+        for (size_t i = 1; i < args.size(); ++i)
+        {
+            if (!reason.empty())
+            {
+                reason += " ";
+            }
+            reason += args[i];
+        }
+
+        if (reason.empty())
+        {
+            send_error_message(ERR_MODERATION_INVALID_ARGS,
+                               "用法：/report <用户名> <原因>",
+                               request_id,
+                               "moderation");
+            return;
+        }
+
+        if (db_)
+        {
+            db_->save_moderation_event(session_.username, target.username, "report", reason);
+        }
+
+        Logger::info(build_log_prefix("moderation", request_id, id_) + "event=report_user target=" + target_username + " reporter=" + session_.username);
+        send_system_message("已提交举报：" + target_username + "，原因：" + reason);
+    }
+
+    void Connection::cmd_announce(const std::vector<std::string> &args)
+    {
+        const std::string request_id = next_request_id("mod");
+        if (!session_.is_authenticated())
+        {
+            send_error_message(ERR_MODERATION_NOT_AUTHORIZED,
+                               "请先登录。",
+                               request_id,
+                               "moderation");
+            return;
+        }
+
+        if (session_.role != "admin")
+        {
+            Logger::warn(build_log_prefix("moderation", request_id, id_) + "event=announce_denied error_code=" + std::string(ERR_MODERATION_NOT_AUTHORIZED) + " operator=" + session_.username);
+            send_error_message(ERR_MODERATION_NOT_AUTHORIZED,
+                               "仅管理员可发布公告。",
+                               request_id,
+                               "moderation");
+            return;
+        }
+
+        if (args.empty())
+        {
+            send_error_message(ERR_MODERATION_INVALID_ARGS,
+                               "用法：/announce <内容>",
+                               request_id,
+                               "moderation");
+            return;
+        }
+
+        std::string message;
+        for (const auto &part : args)
+        {
+            if (!message.empty())
+            {
+                message += " ";
+            }
+            message += part;
+        }
+
+        if (db_)
+        {
+            db_->save_moderation_event(session_.username, "all_users", "announce", message);
+        }
+
+        auto connections = snapshot_all_connections();
+        const std::string payload = "【公告】" + message + "\n-- by " + session_.username;
+        for (const auto &conn : connections)
+        {
+            if (conn && conn->session_.is_authenticated())
+            {
+                conn->send_system_message(payload);
+            }
+        }
+
+        Logger::info(build_log_prefix("moderation", request_id, id_) + "event=announce_user message_len=" + std::to_string(message.size()));
+        send_system_message("公告已发送，影响在线用户数：" + std::to_string(connections.size()));
+    }
+
     // ========== 房间命令 ==========
 
     void Connection::cmd_rooms(const std::vector<std::string> & /*args*/)
@@ -968,7 +1376,6 @@ namespace chat
             send_system_message("请先登录。");
             return;
         }
-
         send_system_message("=== AI 房间 ===");
         send_system_message("#general - 友好助手");
         send_system_message("#code - 编程助手");
@@ -1305,6 +1712,11 @@ namespace chat
         send_system_message("/login <用户名> <密码>   - 登录");
         send_system_message("/users                 - 查看所有用户");
         send_system_message("/status [状态]          - 设置/查看状态");
+        send_system_message("/report <用户名> <原因> - 举报用户");
+        send_system_message("/ban <用户名>           - 管理员封禁账号");
+        send_system_message("/unban <用户名>         - 管理员解封账号");
+        send_system_message("/modlog [数量]         - 管理员查看最近处罚记录");
+        send_system_message("/announce <内容>        - 管理员发布公告");
 
         send_system_message("=== AI 房间 ===");
         send_system_message("/rooms                - 列出 AI 房间");
@@ -1678,6 +2090,8 @@ namespace chat
     {
         if (status == "online")
             return "🟢";
+        if (status == "banned")
+            return "⛔";
         if (status == "busy")
             return "🔴";
         if (status == "away")
@@ -2105,15 +2519,21 @@ namespace chat
 
         if (!g_ai_ip_limiter.allow("ai_ip:" + ip))
         {
-            Logger::warn(build_log_prefix("ai", request_id, id_) + "event=ai_rate_limited scope=ip ip=" + ip);
-            send_system_message("AI 请求过于频繁，请稍后重试。");
+            Logger::warn(build_log_prefix("ai", request_id, id_) + "event=ai_rate_limited scope=ip error_code=" + std::string(ERR_AI_RATE_LIMIT_IP) + " ip=" + ip);
+            send_error_message(ERR_AI_RATE_LIMIT_IP,
+                               "AI 请求过于频繁，请稍后重试。",
+                               request_id,
+                               "ai");
             return;
         }
 
         if (!g_ai_user_limiter.allow(user_key))
         {
-            Logger::warn(build_log_prefix("ai", request_id, id_) + "event=ai_rate_limited scope=user user_id=" + std::to_string(session_.user_id));
-            send_system_message("AI 请求过于频繁，请稍后重试。");
+            Logger::warn(build_log_prefix("ai", request_id, id_) + "event=ai_rate_limited scope=user error_code=" + std::string(ERR_AI_RATE_LIMIT_USER) + " user_id=" + std::to_string(session_.user_id));
+            send_error_message(ERR_AI_RATE_LIMIT_USER,
+                               "AI 请求过于频繁，请稍后重试。",
+                               request_id,
+                               "ai");
             return;
         }
 
@@ -2174,6 +2594,7 @@ namespace chat
     // 推送离线消息
     void Connection::send_offline_messages()
     {
+        const std::string request_id = next_request_id("db");
         Logger::info("[离线消息] 开始检查用户 " + session_.username + " (ID: " + std::to_string(session_.user_id) + ") 的离线消息");
 
         if (!session_.is_authenticated())
@@ -2221,7 +2642,7 @@ namespace chat
 
         if (!ok)
         {
-            Logger::error("[离线消息] 事务执行失败: " + error);
+            Logger::error(build_log_prefix("db", request_id, id_) + "event=offline_message_delivery_failed error_code=" + std::string(ERR_DB_OFFLINE_TX_FAILED) + " detail=" + error);
             return;
         }
 
