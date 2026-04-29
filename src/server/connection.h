@@ -43,6 +43,7 @@ namespace chat
     {
         int user_id = 0;
         std::string username;
+        std::string role = "user";
         std::string current_room = "general";  // 当前所在房间
         std::string current_preset = "friend"; // 当前 AI 预设
         std::string status = "online";         // 在线状态
@@ -101,6 +102,11 @@ namespace chat
         void cmd_login(const std::vector<std::string> &args);
         void cmd_users(const std::vector<std::string> &args);
         void cmd_status(const std::vector<std::string> &args);
+        void cmd_ban(const std::vector<std::string> &args);
+        void cmd_unban(const std::vector<std::string> &args);
+        void cmd_modlog(const std::vector<std::string> &args);
+        void cmd_report(const std::vector<std::string> &args);
+        void cmd_announce(const std::vector<std::string> &args);
         void cmd_friend(const std::vector<std::string> &args);
         void cmd_friend_list();
         void cmd_friend_request(const std::vector<std::string> &args);
@@ -150,6 +156,10 @@ namespace chat
 
         // 工具方法
         void send_system_message(const std::string &content);
+        void send_error_message(const std::string &error_code,
+                                const std::string &content,
+                                const std::string &request_id,
+                                const std::string &module);
         void send_room_list_json();
         void broadcast_room_list();
         void notify_friend_online(int user_id, const std::string &username);
