@@ -189,6 +189,27 @@ namespace chat
                 }
             }
 
+            if (version < 2)
+            {
+                if (!column_exists(db, "users", "role"))
+                {
+                    if (!exec_sql(db, "ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'", error))
+                    {
+                        return false;
+                    }
+                }
+
+                if (!exec_sql(db, "UPDATE users SET role = 'admin' WHERE username = 'admin'", error))
+                {
+                    return false;
+                }
+
+                if (!write_schema_version(db, "users_schema_version", 2, error))
+                {
+                    return false;
+                }
+            }
+
             return true;
         }
 
@@ -215,6 +236,7 @@ namespace chat
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT,
+            role TEXT DEFAULT 'user',
             current_preset TEXT DEFAULT 'friend',
             status TEXT DEFAULT 'online',
             session_token TEXT DEFAULT NULL,
@@ -263,9 +285,11 @@ namespace chat
             return false;
         }
 
+        const std::string role = (username == "admin") ? "admin" : "user";
+
         const char *sql = R"(
-        INSERT INTO users (username, password_hash, status, created_at)
-        VALUES (?, ?, 'offline', ?)
+        INSERT INTO users (username, password_hash, role, status, created_at)
+        VALUES (?, ?, ?, 'offline', ?)
     )";
 
         sqlite3_stmt *stmt = nullptr;
@@ -279,7 +303,8 @@ namespace chat
         std::string pwd_hash = build_password_record(salt_hex, hash_password_with_salt(password, salt_hex));
         sqlite3_bind_text(stmt, 1, username.c_str(), -1, SQLITE_STATIC);
         sqlite3_bind_text(stmt, 2, pwd_hash.c_str(), -1, SQLITE_TRANSIENT);
-        sqlite3_bind_int64(stmt, 3, std::time(nullptr));
+        sqlite3_bind_text(stmt, 3, role.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_int64(stmt, 4, std::time(nullptr));
 
         int rc = sqlite3_step(stmt);
         sqlite3_finalize(stmt);
@@ -301,7 +326,7 @@ namespace chat
     LoginResult UserManager::login(const std::string &username, const std::string &password, User &user)
     {
         const char *sql = R"(
-        SELECT id, username, password_hash, current_preset, status, created_at
+        SELECT id, username, password_hash, role, current_preset, status, created_at
         FROM users
         WHERE username = ?
     )";
@@ -321,9 +346,10 @@ namespace chat
             user.username = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
             const unsigned char *hash_ptr = sqlite3_column_text(stmt, 2);
             std::string stored_hash = hash_ptr ? reinterpret_cast<const char *>(hash_ptr) : "";
-            user.current_preset = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 3));
-            user.status = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 4));
-            user.created_at = sqlite3_column_int64(stmt, 5);
+            user.role = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 3));
+            user.current_preset = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 4));
+            user.status = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 5));
+            user.created_at = sqlite3_column_int64(stmt, 6);
 
             bool password_ok = false;
             bool needs_upgrade = false;
@@ -345,6 +371,12 @@ namespace chat
 
             if (password_ok)
             {
+                if (user.status == "banned")
+                {
+                    Logger::warn("Login blocked for banned user: " + username);
+                    return LoginResult::BANNED;
+                }
+
                 if (needs_upgrade)
                 {
                     std::string new_salt = generate_salt_hex();
@@ -387,7 +419,7 @@ namespace chat
     {
         User user;
         const char *sql = R"(
-        SELECT id, username, current_preset, status, created_at
+        SELECT id, username, role, current_preset, status, created_at
         FROM users
         WHERE id = ?
     )";
@@ -401,9 +433,10 @@ namespace chat
             {
                 user.id = sqlite3_column_int(stmt, 0);
                 user.username = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
-                user.current_preset = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 2));
-                user.status = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 3));
-                user.created_at = sqlite3_column_int64(stmt, 4);
+                user.role = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 2));
+                user.current_preset = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 3));
+                user.status = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 4));
+                user.created_at = sqlite3_column_int64(stmt, 5);
             }
             sqlite3_finalize(stmt);
         }
@@ -415,7 +448,7 @@ namespace chat
     {
         User user;
         const char *sql = R"(
-        SELECT id, username, current_preset, status, created_at
+        SELECT id, username, role, current_preset, status, created_at
         FROM users
         WHERE username = ?
     )";
@@ -429,9 +462,10 @@ namespace chat
             {
                 user.id = sqlite3_column_int(stmt, 0);
                 user.username = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
-                user.current_preset = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 2));
-                user.status = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 3));
-                user.created_at = sqlite3_column_int64(stmt, 4);
+                user.role = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 2));
+                user.current_preset = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 3));
+                user.status = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 4));
+                user.created_at = sqlite3_column_int64(stmt, 5);
             }
             sqlite3_finalize(stmt);
         }
@@ -508,7 +542,7 @@ namespace chat
         std::vector<User> users;
         // 返回所有用户
         const char *sql = R"(
-        SELECT id, username, current_preset, status, created_at
+        SELECT id, username, role, current_preset, status, created_at
         FROM users
         ORDER BY username
     )";
@@ -521,9 +555,10 @@ namespace chat
                 User user;
                 user.id = sqlite3_column_int(stmt, 0);
                 user.username = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
-                user.current_preset = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 2));
-                user.status = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 3));
-                user.created_at = sqlite3_column_int64(stmt, 4);
+                user.role = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 2));
+                user.current_preset = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 3));
+                user.status = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 4));
+                user.created_at = sqlite3_column_int64(stmt, 5);
                 users.push_back(user);
             }
             sqlite3_finalize(stmt);
@@ -655,6 +690,12 @@ namespace chat
             sqlite3_step(stmt);
             sqlite3_finalize(stmt);
         }
+    }
+
+    bool UserManager::is_admin_user(const std::string &username)
+    {
+        User user = get_user_by_name(username);
+        return user.is_valid() && user.role == "admin";
     }
 
 } // namespace chat

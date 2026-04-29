@@ -175,6 +175,27 @@ namespace chat
                 }
             }
 
+            if (version < 4)
+            {
+                const char *sql_v4 = R"(
+            CREATE TABLE IF NOT EXISTS moderation_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                actor TEXT NOT NULL,
+                target TEXT NOT NULL,
+                action TEXT NOT NULL,
+                reason TEXT DEFAULT '',
+                created_at INTEGER NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_moderation_events_actor ON moderation_events(actor, created_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_moderation_events_target ON moderation_events(target, created_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_moderation_events_action ON moderation_events(action, created_at DESC);
+        )";
+                if (!exec_sql(db, sql_v4, err) || !write_schema_version(db, "core_schema_version", 4, err))
+                {
+                    return false;
+                }
+            }
+
             return true;
         }
 
@@ -241,6 +262,79 @@ namespace chat
         }
 
         sqlite3_finalize(stmt);
+    }
+
+    void Database::save_moderation_event(const std::string &actor,
+                                         const std::string &target,
+                                         const std::string &action,
+                                         const std::string &reason)
+    {
+        if (!db_)
+            return;
+
+        const char *sql = R"(
+        INSERT INTO moderation_events (actor, target, action, reason, created_at)
+        VALUES (?, ?, ?, ?, ?)
+    )";
+
+        sqlite3_stmt *stmt = nullptr;
+        if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK)
+        {
+            Logger::error("Failed to prepare moderation event statement: " + std::string(sqlite3_errmsg(db_)));
+            return;
+        }
+
+        const std::time_t now = std::time(nullptr);
+        sqlite3_bind_text(stmt, 1, actor.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 2, target.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 3, action.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 4, reason.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_int64(stmt, 5, static_cast<sqlite3_int64>(now));
+
+        if (sqlite3_step(stmt) != SQLITE_DONE)
+        {
+            Logger::error("Failed to save moderation event: " + std::string(sqlite3_errmsg(db_)));
+        }
+
+        sqlite3_finalize(stmt);
+    }
+
+    std::vector<ModerationEvent> Database::get_recent_moderation_events(int limit)
+    {
+        std::vector<ModerationEvent> events;
+
+        if (!db_)
+            return events;
+
+        const char *sql = R"(
+        SELECT actor, target, action, reason, created_at
+        FROM moderation_events
+        ORDER BY created_at DESC, id DESC
+        LIMIT ?
+    )";
+
+        sqlite3_stmt *stmt = nullptr;
+        if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK)
+        {
+            Logger::error("Failed to prepare moderation event query: " + std::string(sqlite3_errmsg(db_)));
+            return events;
+        }
+
+        sqlite3_bind_int(stmt, 1, limit);
+
+        while (sqlite3_step(stmt) == SQLITE_ROW)
+        {
+            ModerationEvent event;
+            event.actor = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
+            event.target = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
+            event.action = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 2));
+            event.reason = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 3));
+            event.created_at = sqlite3_column_int64(stmt, 4);
+            events.push_back(event);
+        }
+
+        sqlite3_finalize(stmt);
+        return events;
     }
 
     std::vector<Message> Database::get_messages(const std::string &user, int limit)
