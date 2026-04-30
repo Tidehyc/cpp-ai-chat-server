@@ -1,17 +1,18 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import ReactMarkdown from 'react-markdown'
-import remarkBreaks from 'remark-breaks'
 import { useUserStore } from '../stores/userStore'
 import { useMessageStore } from '../stores/messageStore'
 import { wsService } from '../services/websocket'
-import { Bot, BookOpen, Code2, Download, Globe2, History, Lightbulb, MessageSquare, PlusCircle, Settings, Sparkles, Trash2, Users } from 'lucide-react'
+import { ArrowLeft, Bot, BookOpen, ChevronDown, Code2, Download, Globe2, History, Lightbulb, MessageSquare, PlusCircle, Settings, Sparkles, Trash2, Users } from 'lucide-react'
 import type { ConnectionStatus } from '../types'
+import { useSmartScroll } from '../hooks/useSmartScroll'
 
 // 模态框组件
 import ContextModal from '../components/ContextModal'
 import HistoryModal from '../components/HistoryModal'
 import ExportModal from '../components/ExportModal'
+import MarkdownMessage from '../components/MarkdownMessage'
+import MobileTabBar from '../components/MobileTabBar'
 
 // AI 预设
 const AI_PRESETS = [
@@ -38,6 +39,8 @@ export default function AIAssistant() {
   const [showCreatePresetModal, setShowCreatePresetModal] = useState(false)
   const [newPresetName, setNewPresetName] = useState('')
   const [newPresetDescription, setNewPresetDescription] = useState('')
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false)
 
   // 模态框状态
   const [showContextModal, setShowContextModal] = useState(false)
@@ -45,8 +48,15 @@ export default function AIAssistant() {
   const [showExportModal, setShowExportModal] = useState(false)
 
   // 消息列表 ref
-  const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const {
+    containerRef: messageContainerRef,
+    endRef: messagesEndRef,
+    showScrollButton,
+    handleScroll,
+    scrollToBottom,
+    handleContentChange,
+  } = useSmartScroll()
 
   // 使用 ref 包装处理器，避免依赖项变化
   const handleAIResponseRef = useRef<(message: any) => void>(() => {})
@@ -55,14 +65,15 @@ export default function AIAssistant() {
   // AI 对话消息（使用 ai_chat 作为 key）- 使用 selector 确保状态更新时重新渲染
   const aiMessages = useMessageStore(state => state.getMessages('ai_chat'))
 
-  // 滚动到底部
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+  useEffect(() => {
+    handleContentChange()
+  }, [aiMessages, handleContentChange])
 
   useEffect(() => {
-    scrollToBottom()
-  }, [aiMessages])
+    const onResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   // 设置处理器
   handleAIResponseRef.current = (message: any) => {
@@ -160,6 +171,9 @@ export default function AIAssistant() {
     setSelectedPreset(presetName)
     wsService.usePreset(presetName)
     setShowPresetMenu(false)
+    if (isMobile) {
+      setShowMobileSidebar(false)
+    }
     
     // 添加系统提示消息
     const presetLabel = AI_PRESETS.find(p => p.name === presetName)?.label || presetName
@@ -233,24 +247,36 @@ export default function AIAssistant() {
     }
   }
 
+  const showSidebarPanel = !isMobile || showMobileSidebar
+  const showChatPanel = !isMobile || !showMobileSidebar
+
   return (
-    <div className="chat-shell page-enter h-screen flex flex-col md:flex-row">
+    <div className="chat-shell page-enter h-[100dvh] md:h-screen flex flex-col md:flex-row">
       {/* 左侧边栏 - AI 预设 */}
-      <div className="chat-sidebar w-full md:w-80 lg:w-96 flex flex-col">
+      <div className={`${showSidebarPanel ? 'flex' : 'hidden md:flex'} chat-sidebar w-full md:w-80 lg:w-96 flex-col h-full`}>
         {/* 标题栏 */}
         <div className="chat-sidebar-header h-16 flex items-center justify-between px-5">
           <h1 className="chat-title text-lg font-semibold icon-label"><Sparkles size={16} />AI 助手</h1>
+          {isMobile && (
+            <button
+              onClick={() => setShowMobileSidebar(false)}
+              className="rounded-full p-1 theme-muted hover:bg-white/60"
+              title="返回聊天"
+            >
+              <ArrowLeft size={16} />
+            </button>
+          )}
         </div>
 
         {/* 当前预设 */}
-        <div className="chat-search-wrap p-4 border-b border-slate-200/70">
+        <div className="chat-search-wrap p-4 border-b theme-divider">
           <div className="relative">
             <button
               onClick={() => setShowPresetMenu(!showPresetMenu)}
               className="w-full rounded-xl border border-cyan-200 bg-cyan-50/70 px-4 py-3 text-left transition-colors hover:bg-cyan-100/70"
             >
-              <p className="text-xs text-slate-500 mb-1">当前预设</p>
-              <p className="font-medium text-slate-900">
+              <p className="text-xs theme-muted mb-1">当前预设</p>
+              <p className="font-medium text-inherit">
                 {AI_PRESETS.find(p => p.name === selectedPreset)?.label || '朋友'}
               </p>
             </button>
@@ -266,11 +292,11 @@ export default function AIAssistant() {
                       selectedPreset === preset.name ? 'bg-cyan-50/60' : ''
                     }`}
                   >
-                    <p className="font-medium text-slate-900">{preset.label}</p>
-                    <p className="text-xs text-slate-500">{preset.description}</p>
+                    <p className="font-medium text-inherit">{preset.label}</p>
+                    <p className="text-xs theme-muted">{preset.description}</p>
                   </button>
                 ))}
-                <div className="border-t border-slate-200">
+                <div className="border-t theme-divider">
                   <button
                     onClick={() => {
                       setShowCreatePresetModal(true)
@@ -288,9 +314,9 @@ export default function AIAssistant() {
 
         {/* 预设说明 */}
         <div className="chat-friend-list flex-1 overflow-y-auto p-4">
-          <div className="rounded-xl border border-slate-200 bg-white/75 p-4 shadow-sm">
-            <h3 className="text-sm font-medium text-slate-900 mb-2 icon-label"><Lightbulb size={14} />使用说明</h3>
-            <ul className="text-xs text-slate-600 space-y-1">
+          <div className="rounded-xl border theme-divider bg-white/75 p-4 shadow-sm">
+            <h3 className="text-sm font-medium text-inherit mb-2 icon-label"><Lightbulb size={14} />使用说明</h3>
+            <ul className="text-xs theme-muted space-y-1">
               <li>• 选择不同的预设切换 AI 角色</li>
               <li>• 创建自定义预设定义专属 AI</li>
               <li>• 对话历史会保存在本地</li>
@@ -300,10 +326,10 @@ export default function AIAssistant() {
         </div>
 
         {/* 底部用户信息 */}
-        <div className="chat-userbar h-14 flex items-center justify-between px-4">
+            <div className="chat-userbar h-14 flex items-center justify-between px-4">
           <div className="flex items-center">
             <span className={`mr-2 ${getStatusDotClass(status)}`} />
-            <span className="text-sm font-medium text-slate-700">{username}</span>
+            <span className="text-sm font-medium theme-muted">{username}</span>
           </div>
           <button
             onClick={() => setShowLogoutConfirm(true)}
@@ -315,12 +341,12 @@ export default function AIAssistant() {
       </div>
 
       {/* 右侧聊天区域 */}
-      <div className="chat-main flex-1 flex flex-col">
+      <div className={`${showChatPanel ? 'flex' : 'hidden md:flex'} chat-main flex-1 min-h-0 flex-col`}>
         {/* 顶部导航栏 */}
         <div className="chat-topnav h-14 flex items-center justify-between px-6">
           <div className="flex items-center space-x-4">
             <span className="topbar-title icon-label"><Sparkles size={16} />AI 助手</span>
-            <nav className="flex items-center space-x-2">
+            <nav className="no-scrollbar hidden md:flex items-center space-x-2 overflow-x-auto pr-1">
               <Link
                 to="/"
                 className="nav-pill"
@@ -345,6 +371,15 @@ export default function AIAssistant() {
             </nav>
           </div>
           <div className="flex items-center space-x-2">
+            {isMobile && (
+              <button
+                onClick={() => setShowMobileSidebar(true)}
+                className="action-chip"
+                title="预设与说明"
+              >
+                <span className="icon-label"><BookOpen size={14} />预设</span>
+              </button>
+            )}
             <span className={`text-sm ${getStatusColor()}`}>
               <span className={`inline-block mr-1.5 align-middle ${getStatusDotClass(status)}`} />
               {status === 'online' ? '在线' :
@@ -358,8 +393,8 @@ export default function AIAssistant() {
         <div className="chat-roombar h-14 flex items-center justify-between px-6">
           <div className="flex items-center">
             <Bot size={18} className="mr-2 text-cyan-700" />
-            <span className="font-semibold text-slate-900">AI 助手</span>
-            <span className="ml-2 text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
+            <span className="font-semibold text-inherit">AI 助手</span>
+            <span className="ml-2 text-xs theme-muted theme-surface px-2 py-1 rounded">
               {AI_PRESETS.find(p => p.name === selectedPreset)?.label || '朋友'}
             </span>
           </div>
@@ -397,33 +432,33 @@ export default function AIAssistant() {
         </div>
 
         {/* 消息列表 */}
-        <div className="chat-thread flex-1 overflow-y-auto p-6">
+        <div ref={messageContainerRef} onScroll={handleScroll} className="chat-thread relative flex-1 overflow-y-auto p-3 md:p-6">
           {aiMessages.length === 0 ? (
             <div className="h-full flex items-center justify-center text-slate-400">
               <div className="text-center max-w-md">
                 <Sparkles size={44} className="mx-auto mb-4 text-cyan-600" />
-                <h2 className="text-xl font-semibold text-slate-700 mb-2">
+                <h2 className="text-xl font-semibold theme-muted mb-2">
                   你好，我是你的 AI 助手
                 </h2>
-                <p className="text-slate-500 mb-6">
+                <p className="theme-muted mb-6">
                   我可以回答你的问题、帮助你编程、或者只是聊聊天
                 </p>
                 <div className="grid grid-cols-2 gap-3 text-left">
                   <div className="bg-white/90 p-3 rounded-lg shadow-sm">
                     <Lightbulb size={17} className="text-amber-500" />
-                    <p className="text-sm text-slate-600 mt-1">解答各种问题</p>
+                    <p className="text-sm theme-muted mt-1">解答各种问题</p>
                   </div>
                   <div className="bg-white/90 p-3 rounded-lg shadow-sm">
                     <Code2 size={17} className="text-indigo-500" />
-                    <p className="text-sm text-slate-600 mt-1">编程技术支持</p>
+                    <p className="text-sm theme-muted mt-1">编程技术支持</p>
                   </div>
                   <div className="bg-white/90 p-3 rounded-lg shadow-sm">
                     <BookOpen size={17} className="text-emerald-600" />
-                    <p className="text-sm text-slate-600 mt-1">写作润色修改</p>
+                    <p className="text-sm theme-muted mt-1">写作润色修改</p>
                   </div>
                   <div className="bg-white/90 p-3 rounded-lg shadow-sm">
                     <Globe2 size={17} className="text-sky-600" />
-                    <p className="text-sm text-slate-600 mt-1">翻译多国语言</p>
+                    <p className="text-sm theme-muted mt-1">翻译多国语言</p>
                   </div>
                 </div>
               </div>
@@ -447,35 +482,7 @@ export default function AIAssistant() {
                     {!msg.is_own && msg.is_ai && (
                       <p className="msg-sender"><Bot size={12} /><span>AI 助手</span></p>
                     )}
-                    {msg.is_ai ? (
-                      <div className="text-sm text-slate-800 leading-relaxed">
-                        <ReactMarkdown
-                          remarkPlugins={[remarkBreaks]}
-                          components={{
-                            h1: ({node, ...props}) => <h1 className="text-xl font-bold mt-4 mb-2" {...props} />,
-                            h2: ({node, ...props}) => <h2 className="text-lg font-bold mt-3 mb-2" {...props} />,
-                            h3: ({node, ...props}) => <h3 className="text-base font-bold mt-3 mb-1" {...props} />,
-                            h4: ({node, ...props}) => <h4 className="text-sm font-bold mt-2 mb-1" {...props} />,
-                            p: ({node, ...props}) => <p className="my-1" {...props} />,
-                            ul: ({node, ...props}) => <ul className="list-disc list-inside my-2 space-y-1" {...props} />,
-                            ol: ({node, ...props}) => <ol className="list-decimal list-inside my-2 space-y-1" {...props} />,
-                            li: ({node, ...props}) => <li className="ml-2" {...props} />,
-                            code: ({node, inline, ...props}: any) =>
-                              inline ? (
-                                <code className="bg-slate-100 px-1 py-0.5 rounded text-xs font-mono" {...props} />
-                              ) : (
-                                <code className="block bg-slate-100 p-3 rounded my-2 text-xs font-mono overflow-x-auto" {...props} />
-                              ),
-                            hr: ({node, ...props}) => <hr className="my-4 border-slate-300" {...props} />,
-                            strong: ({node, ...props}) => <strong className="font-bold" {...props} />,
-                          }}
-                        >
-                          {msg.content}
-                        </ReactMarkdown>
-                      </div>
-                    ) : (
-                      <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                    )}
+                    <MarkdownMessage content={msg.content} />
                     <div className={`msg-meta ${msg.is_own ? 'msg-meta-own' : 'msg-meta-other'}`}>
                       <p>{msg.timestamp}</p>
                     </div>
@@ -485,10 +492,20 @@ export default function AIAssistant() {
               <div ref={messagesEndRef} />
             </div>
           )}
+
+          {showScrollButton && (
+            <button
+              onClick={() => scrollToBottom('smooth')}
+              className="absolute bottom-4 right-4 rounded-full bg-slate-900/80 p-2 text-white shadow-lg transition hover:bg-slate-800"
+              title="回到底部"
+            >
+              <ChevronDown size={16} />
+            </button>
+          )}
         </div>
 
         {/* 输入框 */}
-        <div className="chat-composer p-4">
+        <div className="chat-composer sticky bottom-0 z-10 p-3 md:p-4">
           <div className="flex items-end space-x-3">
             <textarea
               ref={inputRef}
@@ -497,7 +514,7 @@ export default function AIAssistant() {
               onKeyDown={handleKeyDown}
               placeholder="向 AI 提问... (Enter 发送，Shift+Enter 换行)"
               rows={1}
-              className="flex-1 resize-none rounded-xl border border-white/60 bg-white/85 px-4 py-3 text-slate-900 shadow-sm outline-none transition-all focus:border-cyan-400 focus:bg-white focus:ring-2 focus:ring-cyan-200"
+              className="flex-1 resize-none rounded-xl border theme-divider theme-surface px-4 py-3 text-base md:text-sm text-inherit shadow-sm outline-none transition-all focus:border-cyan-400 focus:bg-white focus:ring-2 focus:ring-cyan-200"
               style={{ minHeight: '48px', maxHeight: '120px' }}
             />
             <button
@@ -510,6 +527,8 @@ export default function AIAssistant() {
           </div>
         </div>
       </div>
+
+      <MobileTabBar />
 
       {/* 创建预设模态框 */}
       {showCreatePresetModal && (
@@ -591,7 +610,7 @@ export default function AIAssistant() {
         <div className="modal-overlay">
           <div className="modal-card max-w-sm">
             <h3 className="modal-title mb-2">确认退出</h3>
-            <p className="text-slate-600 mb-6">确定要退出登录吗？</p>
+            <p className="theme-muted mb-6">确定要退出登录吗？</p>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setShowLogoutConfirm(false)}

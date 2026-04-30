@@ -28,23 +28,19 @@ export default function Sidebar({ currentPage = 'chat' }: SidebarProps) {
   }
 
   return (
-    <div className="w-16 bg-white border-r border-gray-200 flex flex-col items-center py-4">
-      {/* Logo */}
+    <div className="w-16 theme-surface flex flex-col items-center py-4">
       <div className="mb-8">
         <Bot size={22} className="text-cyan-600" />
       </div>
 
-      {/* 导航 */}
       <nav className="flex-1 space-y-2">
         {navItems.map((item) => (
           <NavLink
             key={item.id}
             to={item.path}
             className={({ isActive }) =>
-              `w-12 h-12 flex items-center justify-center rounded-xl transition-colors ${
-                isActive
-                  ? 'bg-blue-100 text-blue-600'
-                  : 'text-gray-600 hover:bg-gray-100'
+              `w-12 h-12 flex items-center justify-center rounded-xl transition-colors theme-nav-item ${
+                isActive ? 'is-active' : ''
               }`
             }
             title={item.label}
@@ -54,8 +50,7 @@ export default function Sidebar({ currentPage = 'chat' }: SidebarProps) {
         ))}
       </nav>
 
-      {/* 用户状态 */}
-      <div className="pt-4 border-t border-gray-200">
+      <div className="pt-4 border-t theme-divider">
         <div className="icon-only" title={status}>
           <Circle size={10} fill="currentColor" className={getStatusClass(status)} />
         </div>

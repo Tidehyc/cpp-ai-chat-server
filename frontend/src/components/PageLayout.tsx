@@ -7,11 +7,11 @@ interface PageLayoutProps {
 
 export default function PageLayout({ children, title }: PageLayoutProps) {
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="theme-page">
       {title && (
-        <div className="bg-white border-b border-gray-200">
+        <div className="theme-surface theme-divider">
           <div className="max-w-7xl mx-auto px-4 py-4">
-            <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+            <h1 className="text-2xl font-bold text-inherit">{title}</h1>
           </div>
         </div>
       )}

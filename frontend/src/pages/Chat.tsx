@@ -5,9 +5,10 @@ import { useFriendStore } from '../stores/friendStore'
 import { useMessageStore } from '../stores/messageStore'
 import { useRoomStore } from '../stores/roomStore'
 import { wsService } from '../services/websocket'
-import { ArrowLeft, Bot, Check, CheckCheck, CheckCircle2, CircleAlert, CircleX, Download, History, Mail, MessageSquare, Plus, Settings, Trash2, User, UserPlus, Users, X } from 'lucide-react'
+import { ArrowLeft, Bot, Check, CheckCheck, CheckCircle2, ChevronDown, CircleAlert, CircleX, Download, History, Mail, MessageSquare, Plus, Settings, Trash2, User, UserPlus, Users, X } from 'lucide-react'
 import type { ConnectionStatus } from '../types'
 import type { FriendRequest } from '../types/friend'
+import { useSmartScroll } from '../hooks/useSmartScroll'
 
 // 模态框组件
 import ContextModal from '../components/ContextModal'
@@ -15,6 +16,8 @@ import HistoryModal from '../components/HistoryModal'
 import SearchModal from '../components/SearchModal'
 import ExportModal from '../components/ExportModal'
 import SessionExpiredModal from '../components/SessionExpiredModal'
+import MarkdownMessage from '../components/MarkdownMessage'
+import MobileTabBar from '../components/MobileTabBar'
 
 export default function Chat() {
   const navigate = useNavigate()
@@ -37,6 +40,7 @@ export default function Chat() {
   const [newFriendUsername, setNewFriendUsername] = useState('')
   const [friendRequestStatus, setFriendRequestStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle')
   const [friendRequestMessage, setFriendRequestMessage] = useState('')
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
   
   // 模态框状态
   const [showContextModal, setShowContextModal] = useState(false)
@@ -46,10 +50,17 @@ export default function Chat() {
   const [showSessionExpired, setShowSessionExpired] = useState(false)
 
   // 消息列表 ref
-  const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const selectedFriendRef = useRef<string | null>(null)
   const lastSentTargetRef = useRef<string | null>(null) // 记录最后发送的目标好友
+  const {
+    containerRef: messageContainerRef,
+    endRef: messagesEndRef,
+    showScrollButton,
+    handleScroll,
+    scrollToBottom,
+    handleContentChange,
+  } = useSmartScroll()
 
   // 同步 selectedFriend 到 ref
   useEffect(() => {
@@ -66,14 +77,21 @@ export default function Chat() {
   // 当前聊天消息
   const currentMessages = selectedFriend ? getMessages(selectedFriend) : []
 
-  // 滚动到底部
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+  useEffect(() => {
+    if (selectedFriend) {
+      scrollToBottom('auto')
+    }
+  }, [selectedFriend, scrollToBottom])
 
   useEffect(() => {
-    scrollToBottom()
-  }, [currentMessages])
+    handleContentChange()
+  }, [currentMessages, handleContentChange])
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   // 处理好友列表 - 使用 useCallback 包装
   const handleFriendList = useCallback((message: any) => {
@@ -121,20 +139,10 @@ export default function Chat() {
 
   // 处理发送的消息
   const handleSentMessage = useCallback((message: any) => {
-    // 更新自己发送的消息的已读状态
+    // sent_message 仅表示服务器已接收，先标记为已送达
     const toUser = message.to
     if (toUser) {
-      const messages = useMessageStore.getState().getMessages(toUser)
-      const updatedMessages = messages.map(msg => {
-        if (msg.is_own && msg.content === message.content) {
-          return { ...msg, is_read: true }
-        }
-        return msg
-      })
-      useMessageStore.getState().clearMessages(toUser)
-      updatedMessages.forEach(msg => {
-        useMessageStore.getState().addMessage(toUser, msg, msg.is_own)
-      })
+      useMessageStore.getState().markLatestOwnMessageDelivered(toUser)
     }
   }, [])
 
@@ -253,10 +261,7 @@ export default function Chat() {
         await wsService.connect()
         setConnectionStatus('connected')
 
-        // 连接成功后，检查是否需要自动登录
         if (username) {
-          // 强制重置状态为 online
-          useUserStore.getState().setStatus('online')
           console.log('[Chat] User restored from localStorage:', username)
         }
       } catch (err) {
@@ -375,6 +380,8 @@ export default function Chat() {
       content,
       timestamp: new Date().toLocaleString('zh-CN'),
       is_own: true,
+      is_delivered: false,
+      is_read: false,
     }, true) // isOwn = true
 
     // 发送私聊命令
@@ -399,6 +406,11 @@ export default function Chat() {
 
     // 标记消息为已读
     wsService.sendCommand(`/read ${friendUsername}`)
+  }
+
+  const handleBackToFriendList = () => {
+    setSelectedFriend(null)
+    setCurrentChatTarget(null)
   }
 
   // 添加好友
@@ -441,10 +453,13 @@ export default function Chat() {
     }
   }
 
+  const showFriendListPanel = !isMobile || !selectedFriend
+  const showChatPanel = !isMobile || Boolean(selectedFriend)
+
   return (
-    <div className="chat-shell page-enter h-screen flex flex-col md:flex-row">
+    <div className="chat-shell page-enter h-[100dvh] md:h-screen flex flex-col md:flex-row">
       {/* 左侧边栏 - 好友列表 */}
-      <div className="chat-sidebar w-full md:w-80 lg:w-96 flex flex-col">
+      <div className={`${showFriendListPanel ? 'flex' : 'hidden md:flex'} chat-sidebar w-full md:w-80 lg:w-96 flex-col h-full`}>
         {/* 标题栏 */}
         <div className="chat-sidebar-header h-16 flex items-center justify-between px-5">
           <h1 className="chat-title text-lg font-semibold">好友聊天</h1>
@@ -455,7 +470,7 @@ export default function Chat() {
               setFriendRequestMessage('')
               setNewFriendUsername('')
             }}
-            className="h-10 w-10 rounded-xl border border-white/40 bg-white/50 text-lg transition-all hover:-translate-y-0.5 hover:bg-white/80"
+            className="h-10 w-10 rounded-xl border theme-divider theme-surface text-lg transition-all hover:-translate-y-0.5 hover:bg-white/90"
             title="添加好友"
           >
               <Plus size={18} strokeWidth={2.2} />
@@ -471,7 +486,7 @@ export default function Chat() {
             </div>
             {pendingRequests.map((request) => (
               <div key={request.id} className="mb-2 rounded-xl border border-amber-200 bg-white/90 p-2 shadow-sm">
-                <p className="mb-2 text-sm text-slate-700">
+                <p className="mb-2 text-sm theme-muted">
                   <span className="font-medium">{request.senderUsername}</span> 请求添加你为好友
                 </p>
                 <div className="flex space-x-2">
@@ -500,14 +515,14 @@ export default function Chat() {
             placeholder="搜索好友..."
             value={useFriendStore((state) => state.searchQuery)}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-xl border border-white/50 bg-white/70 px-4 py-2.5 text-sm text-slate-800 shadow-sm outline-none transition-all focus:border-cyan-400 focus:bg-white focus:ring-2 focus:ring-cyan-200"
+            className="w-full rounded-xl border theme-divider theme-surface px-4 py-2.5 text-sm text-inherit shadow-sm outline-none transition-all focus:border-cyan-400 focus:bg-white focus:ring-2 focus:ring-cyan-200"
           />
         </div>
 
         {/* 好友列表 */}
         <div className="chat-friend-list flex-1 overflow-y-auto">
           {filteredFriends.length === 0 ? (
-            <div className="p-4 text-center text-slate-500 text-sm">
+            <div className="p-4 text-center theme-muted text-sm">
               {friends.length === 0 ? '暂无好友，点击右上角添加' : '没有找到匹配的好友'}
             </div>
           ) : (
@@ -528,7 +543,7 @@ export default function Chat() {
                     <span className={`mr-3 ${getStatusDotClass(friend.status)}`} />
                     <div className="flex-1 text-left">
                       <div className="flex items-center justify-between">
-                        <p className={`text-sm font-medium ${unreadCount > 0 ? 'font-bold text-slate-900' : 'text-slate-800'}`}>
+                        <p className={`text-sm font-medium ${unreadCount > 0 ? 'font-bold text-inherit' : 'text-inherit'}`}>
                           {friend.username}
                         </p>
                         {/* 未读消息提示 */}
@@ -538,7 +553,7 @@ export default function Chat() {
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs theme-muted">
                         {friend.status === 'online' ? '在线' :
                          friend.status === 'busy' ? '忙碌' :
                          friend.status === 'away' ? '离开' : '离线'}
@@ -573,8 +588,8 @@ export default function Chat() {
         <div className="chat-userbar h-14 flex items-center justify-between px-4">
           <div className="flex items-center">
             <span className={`mr-2 ${getStatusDotClass(status)}`} />
-            <span className="text-sm font-medium text-slate-700">{username}</span>
-            <span className="ml-2 text-xs text-slate-500">
+            <span className="text-sm font-medium theme-muted">{username}</span>
+            <span className="ml-2 text-xs theme-muted">
               {status === 'online' ? '在线' :
                status === 'busy' ? '忙碌' :
                status === 'away' ? '离开' :
@@ -591,12 +606,12 @@ export default function Chat() {
       </div>
 
       {/* 右侧聊天区域 */}
-      <div className="chat-main flex-1 flex flex-col">
+      <div className={`${showChatPanel ? 'flex' : 'hidden md:flex'} chat-main flex-1 min-h-0 flex-col`}>
         {/* 顶部导航栏 */}
         <div className="chat-topnav h-14 flex items-center justify-between px-6">
           <div className="flex items-center space-x-4">
             <span className="topbar-title">私聊</span>
-            <nav className="flex items-center space-x-2">
+            <nav className="no-scrollbar hidden md:flex items-center space-x-2 overflow-x-auto pr-1">
               <Link
                 to="/contact"
                 className="nav-pill"
@@ -620,7 +635,7 @@ export default function Chat() {
               </Link>
             </nav>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="hidden md:flex items-center space-x-2">
             <span className={`text-sm ${getStatusColor()}`}>
               <span className={`inline-block mr-1.5 align-middle ${getStatusDotClass(status)}`} />
               {status === 'online' ? '在线' :
@@ -635,15 +650,24 @@ export default function Chat() {
           <div className="flex items-center">
             {selectedFriend ? (
               <>
+                {isMobile && (
+                  <button
+                    onClick={handleBackToFriendList}
+                    className="mr-2 rounded-full p-1 theme-muted hover:bg-white/60"
+                    title="返回会话列表"
+                  >
+                    <ArrowLeft size={16} />
+                  </button>
+                )}
                 <MessageSquare size={18} className="mr-2 text-cyan-700" />
-                <span className="font-semibold text-slate-900">{selectedFriend}</span>
+                <span className="font-semibold text-inherit">{selectedFriend}</span>
                 <span className={`ml-3 text-sm ${getStatusColor()}`}>
                   <span className={`inline-block mr-1.5 align-middle ${getStatusDotClass(friends.find(f => f.username === selectedFriend)?.status || 'offline')}`} />
                   {getStatusText()}
                 </span>
               </>
             ) : (
-              <span className="text-slate-500">选择一个好友开始聊天</span>
+              <span className="theme-muted">选择一个好友开始聊天</span>
             )}
           </div>
 
@@ -668,7 +692,7 @@ export default function Chat() {
         </div>
 
         {/* 消息列表 */}
-        <div className="chat-thread flex-1 overflow-y-auto p-6">
+        <div ref={messageContainerRef} onScroll={handleScroll} className="chat-thread relative flex-1 overflow-y-auto p-3 md:p-6">
           {selectedFriend ? (
             currentMessages.length === 0 ? (
               <div className="h-full flex items-center justify-center text-slate-400">
@@ -705,15 +729,19 @@ export default function Chat() {
                             <span>{msg.from_user}</span>
                           </p>
                         )}
-                        <p className="text-sm">{msg.content}</p>
+                        <MarkdownMessage content={msg.content} />
                         <div className={`msg-meta ${msg.is_own ? 'msg-meta-own' : 'msg-meta-other'}`}>
                           <p>
                             {msg.timestamp}
                           </p>
                           {/* 自己发送的消息显示已读状态 */}
                           {msg.is_own && (
-                            <span title={msg.is_read ? '已读' : '未读'}>
-                              {msg.is_read ? <CheckCheck size={13} /> : <Check size={13} />}
+                            <span title={msg.is_read ? '已读' : msg.is_delivered ? '已送达' : '发送中'}>
+                              {msg.is_read ? (
+                                <CheckCheck size={13} />
+                              ) : (
+                                <Check size={13} className={msg.is_delivered ? '' : 'opacity-50'} />
+                              )}
                             </span>
                           )}
                         </div>
@@ -733,11 +761,21 @@ export default function Chat() {
               </div>
             </div>
           )}
+
+          {selectedFriend && showScrollButton && (
+            <button
+              onClick={() => scrollToBottom('smooth')}
+              className="absolute bottom-4 right-4 rounded-full bg-slate-900/80 p-2 text-white shadow-lg transition hover:bg-slate-800"
+              title="回到底部"
+            >
+              <ChevronDown size={16} />
+            </button>
+          )}
         </div>
 
         {/* 输入框 */}
         {selectedFriend && (
-          <div className="chat-composer p-4">
+          <div className="chat-composer sticky bottom-0 z-10 p-3 md:p-4">
             <div className="flex items-end space-x-3">
               <textarea
                 ref={inputRef}
@@ -746,7 +784,7 @@ export default function Chat() {
                 onKeyDown={handleKeyDown}
                 placeholder="输入消息... (Enter 发送，Shift+Enter 换行)"
                 rows={1}
-                className="flex-1 resize-none rounded-xl border border-white/60 bg-white/85 px-4 py-3 text-slate-900 shadow-sm outline-none transition-all focus:border-cyan-400 focus:bg-white focus:ring-2 focus:ring-cyan-200"
+                className="flex-1 resize-none rounded-xl border theme-divider theme-surface px-4 py-3 text-base md:text-sm text-inherit shadow-sm outline-none transition-all focus:border-cyan-400 focus:bg-white focus:ring-2 focus:ring-cyan-200"
                 style={{ minHeight: '48px', maxHeight: '120px' }}
               />
               <button
@@ -760,6 +798,8 @@ export default function Chat() {
           </div>
         )}
       </div>
+
+      <MobileTabBar />
 
       {/* 添加好友模态框 */}
       {showFriendRequestModal && (
@@ -805,7 +845,7 @@ export default function Chat() {
               }}
               placeholder="输入用户名"
               disabled={friendRequestStatus === 'sending' || friendRequestStatus === 'success'}
-              className="modal-input mb-4 disabled:bg-slate-100"
+              className="modal-input mb-4 disabled:bg-slate-200"
               autoFocus
             />
 
@@ -851,7 +891,7 @@ export default function Chat() {
         <div className="modal-overlay">
           <div className="modal-card max-w-sm">
             <h3 className="modal-title mb-2">确认退出</h3>
-            <p className="text-slate-600 mb-6">确定要退出登录吗？</p>
+            <p className="theme-muted mb-6">确定要退出登录吗？</p>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setShowLogoutConfirm(false)}

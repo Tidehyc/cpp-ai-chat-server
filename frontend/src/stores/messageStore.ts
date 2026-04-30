@@ -27,6 +27,7 @@ interface MessageState {
   incrementUnread: (target: string) => void
   clearUnread: (target: string) => void
   clearAllUnread: () => void
+  markLatestOwnMessageDelivered: (target: string) => void
   markMessagesRead: (target: string) => void
 }
 
@@ -116,6 +117,29 @@ export const useMessageStore = create<MessageState>((set, get) => ({
   // 清除所有未读消息数
   clearAllUnread: () => set({ unreadCounts: new Map() }),
 
+  // 标记最新一条自己发送的消息为已送达
+  markLatestOwnMessageDelivered: (target: string) => set((state) => {
+    const messages = state.messages.get(target) || []
+    if (messages.length === 0) return state
+
+    let updated = false
+    const next = [...messages]
+
+    for (let i = next.length - 1; i >= 0; i--) {
+      const msg = next[i]
+      if (msg.is_own && !msg.is_delivered) {
+        next[i] = { ...msg, is_delivered: true }
+        updated = true
+        break
+      }
+    }
+
+    if (!updated) return state
+
+    const newMap = new Map(state.messages).set(target, next)
+    return { messages: newMap }
+  }),
+
   // 标记指定用户的消息为已读
   markMessagesRead: (target: string) => set((state) => {
     const messages = state.messages.get(target) || []
@@ -123,7 +147,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     const newMessages = messages.map(msg => {
       if (msg.is_own && !msg.is_read) {
         hasChanges = true
-        return { ...msg, is_read: true }
+        return { ...msg, is_delivered: true, is_read: true }
       }
       return msg
     })

@@ -88,14 +88,14 @@ export default function HistoryModal({ isOpen, onClose, target }: HistoryModalPr
   if (!isOpen || !target) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+    <div className="modal-overlay">
+      <div className="theme-modal w-full max-w-2xl max-h-[80vh] flex flex-col">
         {/* 标题 */}
-        <div className="h-14 border-b border-gray-200 flex items-center justify-between px-6">
+        <div className="h-14 border-b theme-divider flex items-center justify-between px-6">
           <h3 className="text-lg font-semibold icon-label"><History size={17} />聊天记录 - {target}</h3>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-white/60 rounded-lg transition-colors"
           >
             <X size={16} />
           </button>
@@ -105,11 +105,11 @@ export default function HistoryModal({ isOpen, onClose, target }: HistoryModalPr
         <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <svg className="animate-spin h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24">
+              <svg className="animate-spin h-8 w-8 text-cyan-600" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              <span className="ml-3 text-gray-600">加载中...</span>
+              <span className="ml-3 theme-muted">加载中...</span>
             </div>
           ) : history.length > 0 ? (
             <div className="space-y-4">
@@ -121,15 +121,15 @@ export default function HistoryModal({ isOpen, onClose, target }: HistoryModalPr
                   <div
                     className={`max-w-md px-4 py-2 rounded-2xl ${
                       msg.is_own
-                        ? 'bg-blue-600 text-white rounded-br-none'
-                        : 'bg-white text-gray-900 rounded-bl-none shadow'
+                        ? 'theme-message-own rounded-br-none'
+                        : 'theme-message-other rounded-bl-none shadow'
                     }`}
                   >
                     {!msg.is_own && (
-                      <p className="text-xs text-gray-500 mb-1">{msg.from_user}</p>
+                      <p className="text-xs theme-muted mb-1">{msg.from_user}</p>
                     )}
                     <p className="text-sm">{msg.content}</p>
-                    <p className={`text-xs mt-1 ${msg.is_own ? 'text-blue-100' : 'text-gray-400'}`}>
+                    <p className={`text-xs mt-1 ${msg.is_own ? 'text-blue-100' : 'theme-muted'}`}>
                       {msg.timestamp}
                     </p>
                   </div>
@@ -158,14 +158,14 @@ export default function HistoryModal({ isOpen, onClose, target }: HistoryModalPr
                     className={`max-w-md px-4 py-2 rounded-2xl ${
                       msg.is_own
                         ? 'bg-blue-600 text-white rounded-br-none'
-                        : 'bg-white text-gray-900 rounded-bl-none shadow'
+                        : 'theme-message-other rounded-bl-none shadow'
                     }`}
                   >
                     {!msg.is_own && (
-                      <p className="text-xs text-gray-500 mb-1">{msg.from_user}</p>
+                      <p className="text-xs theme-muted mb-1">{msg.from_user}</p>
                     )}
                     <p className="text-sm">{msg.content}</p>
-                    <p className={`text-xs mt-1 ${msg.is_own ? 'text-blue-100' : 'text-gray-400'}`}>
+                    <p className={`text-xs mt-1 ${msg.is_own ? 'text-blue-100' : 'theme-muted'}`}>
                       {msg.timestamp}
                     </p>
                   </div>
@@ -173,18 +173,18 @@ export default function HistoryModal({ isOpen, onClose, target }: HistoryModalPr
               ))}
             </div>
           ) : (
-            <div className="text-center py-12 text-gray-400">
-              <MessageSquare size={32} className="mx-auto mb-4 text-slate-300" />
+            <div className="text-center py-12 theme-muted">
+              <MessageSquare size={32} className="mx-auto mb-4 theme-muted" />
               <p>暂无历史记录</p>
             </div>
           )}
         </div>
 
         {/* 底部按钮 */}
-        <div className="h-14 border-t border-gray-200 flex items-center justify-end px-6 space-x-3">
+        <div className="h-14 border-t theme-divider flex items-center justify-end px-6 space-x-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="px-4 py-2 theme-muted hover:bg-white/60 rounded-lg transition-colors"
           >
             关闭
           </button>

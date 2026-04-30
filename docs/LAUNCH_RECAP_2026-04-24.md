@@ -1,3 +1,10 @@
+# 文档迁移说明
+
+本文件已归档至：
+
+- [archive/2026-04/LAUNCH_RECAP_2026-04-24.md](archive/2026-04/LAUNCH_RECAP_2026-04-24.md)
+
+说明：保留本入口用于兼容历史链接。
 # 产品上线路线复盘记录（2026-04-24）
 
 适用范围：从上一轮“产品化上线手册”推进开始，到本轮安全基线、可观测性最小闭环和容器生产加固落地为止。
@@ -501,7 +508,7 @@ module=connection request_id=cmd-51 connection_id=7 event=command_received summa
 
 ## 17. 继续推进：v1.3 P0 流程治理文档落地
 
-在发布/回滚演练闭环完成后，继续推进了 `docs/BACKEND_TODO_CHECKLIST_V1.3.md` 的 P0 项，避免团队后续协作继续依赖口头约定。
+在发布/回滚演练闭环完成后，继续推进了 `docs/BACKEND_TODO_CHECKLIST.md` 的 P0 项，避免团队后续协作继续依赖口头约定。
 
 ### 17.1 本轮新增与更新
 
@@ -521,7 +528,7 @@ module=connection request_id=cmd-51 connection_id=7 event=command_received summa
 
 ### 17.2 清单状态同步
 
-已将 `docs/BACKEND_TODO_CHECKLIST_V1.3.md` 中以下条目标记为完成：
+已将 `docs/BACKEND_TODO_CHECKLIST.md` 中以下条目标记为完成：
 
 - P0-1 贡献流程标准化
 - P0-2 Release 分支保护模板落地
@@ -559,7 +566,7 @@ module=connection request_id=cmd-51 connection_id=7 event=command_received summa
 
 ### 18.2 对应清单进展
 
-- `docs/BACKEND_TODO_CHECKLIST_V1.3.md` 中 P1-3 三项已完成并勾选
+- `docs/BACKEND_TODO_CHECKLIST.md` 中 P1-3 三项已完成并勾选
 
 ### 18.3 价值总结
 
@@ -587,7 +594,7 @@ module=connection request_id=cmd-51 connection_id=7 event=command_received summa
     - 新增“门禁阈值上下文”与“阈值治理记录”章节
 - 更新 `README.md`
     - 补充策略文档入口与阈值变更治理说明
-- 更新 `docs/BACKEND_TODO_CHECKLIST_V1.3.md`
+- 更新 `docs/BACKEND_TODO_CHECKLIST.md`
     - P1-4 三项全部勾选完成
 
 ### 19.3 价值总结
@@ -607,7 +614,7 @@ module=connection request_id=cmd-51 connection_id=7 event=command_received summa
 - 新增 `scripts/audit_backend_governance.sh`
     - 检查 `backend-checks` workflow、后端检查脚本、贡献文档、release 分支保护模板、性能门禁策略与记录模板是否齐全
     - 检查 README 是否链接到了这些治理入口
-    - 检查 `docs/BACKEND_TODO_CHECKLIST_V1.3.md` 中 P2-5 是否已经接入
+    - 检查 `docs/BACKEND_TODO_CHECKLIST.md` 中 P2-5 是否已经接入
     - 输出 `AUDIT_STATUS=OK/FAILED`、`AUDIT_OK=*`、`AUDIT_FAIL=*`，便于直接贴到 PR 评论
 
 ### 20.2 文档同步
@@ -615,7 +622,7 @@ module=connection request_id=cmd-51 connection_id=7 event=command_received summa
 - 更新 `README.md`
     - 增加“治理巡检（发布前自检）”章节
     - 明确该脚本用于发布前自检和 PR 评论输出
-- 更新 `docs/BACKEND_TODO_CHECKLIST_V1.3.md`
+- 更新 `docs/BACKEND_TODO_CHECKLIST.md`
     - P2-5 三项勾选完成
     - 进度记录新增 `2026-05-W2：P2-5 完成`
 
@@ -649,7 +656,7 @@ module=connection request_id=cmd-51 connection_id=7 event=command_received summa
     - 在发布治理说明中要求先执行核对清单
 - 更新 `docs/devlog.md`
     - 追加 2026-04-25 的发布文档一致性治理记录
-- 更新 `docs/BACKEND_TODO_CHECKLIST_V1.3.md`
+- 更新 `docs/BACKEND_TODO_CHECKLIST.md`
     - P2-6 三项全部勾选完成
     - 进度记录新增 `2026-05-W2：P2-6 完成`
 

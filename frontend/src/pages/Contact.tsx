@@ -4,13 +4,16 @@ import { useUserStore } from '../stores/userStore'
 import { useMessageStore } from '../stores/messageStore'
 import { useRoomStore, DEFAULT_GROUP_ROOMS } from '../stores/roomStore'
 import { wsService } from '../services/websocket'
-import { ArrowLeft, Bot, Code2, Download, Film, Gamepad2, History, Home, MessageSquare, Music2, Plus, Settings, User, Users } from 'lucide-react'
+import { ArrowLeft, Bot, ChevronDown, Code2, Download, Film, Gamepad2, History, Home, MessageSquare, Music2, Plus, Settings, User, Users } from 'lucide-react'
 import type { ConnectionStatus } from '../types'
+import { useSmartScroll } from '../hooks/useSmartScroll'
 
 // 模态框组件
 import HistoryModal from '../components/HistoryModal'
 import ExportModal from '../components/ExportModal'
 import SessionExpiredModal from '../components/SessionExpiredModal'
+import MarkdownMessage from '../components/MarkdownMessage'
+import MobileTabBar from '../components/MobileTabBar'
 
 export default function Contact() {
   const navigate = useNavigate()
@@ -29,6 +32,7 @@ export default function Contact() {
   const [showCreateRoomModal, setShowCreateRoomModal] = useState(false)
   const [newRoomName, setNewRoomName] = useState('')
   const [newRoomDescription, setNewRoomDescription] = useState('')
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
   
   // 模态框状态
   const [showHistoryModal, setShowHistoryModal] = useState(false)
@@ -36,20 +40,34 @@ export default function Contact() {
   const [showSessionExpired, setShowSessionExpired] = useState(false)
 
   // 消息列表 ref
-  const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const {
+    containerRef: messageContainerRef,
+    endRef: messagesEndRef,
+    showScrollButton,
+    handleScroll,
+    scrollToBottom,
+    handleContentChange,
+  } = useSmartScroll()
 
   // 当前房间消息
   const currentMessages = currentRoom ? getMessages(currentRoom) : []
 
-  // 滚动到底部
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+  useEffect(() => {
+    if (currentRoom) {
+      scrollToBottom('auto')
+    }
+  }, [currentRoom, scrollToBottom])
 
   useEffect(() => {
-    scrollToBottom()
-  }, [currentMessages])
+    handleContentChange()
+  }, [currentMessages, handleContentChange])
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   // 使用 ref 存储处理函数，避免依赖项变化
   const handleRoomMessageRef = useRef<(message: any) => void>(() => {})
@@ -293,6 +311,11 @@ export default function Contact() {
     }
   }
 
+  const handleBackToRoomList = () => {
+    setCurrentRoom(null, 'group')
+    setCurrentChatTarget(null)
+  }
+
   // 创建房间
   const handleCreateRoom = () => {
     if (!newRoomName.trim()) return
@@ -350,20 +373,23 @@ export default function Contact() {
       case '#gaming': return <Gamepad2 size={18} className="text-violet-600" />
       case '#music': return <Music2 size={18} className="text-emerald-600" />
       case '#movie': return <Film size={18} className="text-rose-600" />
-      default: return <MessageSquare size={18} className="text-slate-500" />
+      default: return <MessageSquare size={18} className="theme-muted" />
     }
   }
 
+  const showRoomListPanel = !isMobile || !currentRoom
+  const showChatPanel = !isMobile || Boolean(currentRoom)
+
   return (
-    <div className="chat-shell page-enter h-screen flex flex-col md:flex-row">
+    <div className="chat-shell page-enter h-[100dvh] md:h-screen flex flex-col md:flex-row">
       {/* 左侧边栏 - 群聊房间列表 */}
-      <div className="chat-sidebar w-full md:w-80 lg:w-96 flex flex-col">
+      <div className={`${showRoomListPanel ? 'flex' : 'hidden md:flex'} chat-sidebar w-full md:w-80 lg:w-96 flex-col h-full`}>
         {/* 标题栏 */}
         <div className="chat-sidebar-header h-16 flex items-center justify-between px-5">
           <h1 className="chat-title text-lg font-semibold icon-label"><Users size={16} />群聊房间</h1>
           <button
             onClick={() => setShowCreateRoomModal(true)}
-            className="h-10 w-10 rounded-xl border border-white/40 bg-white/50 text-lg transition-all hover:-translate-y-0.5 hover:bg-white/80"
+            className="h-10 w-10 rounded-xl border theme-divider theme-surface text-lg transition-all hover:-translate-y-0.5 hover:bg-white/90"
             title="创建房间"
           >
             <Plus size={18} strokeWidth={2.2} />
@@ -373,7 +399,7 @@ export default function Contact() {
         {/* 房间列表 */}
         <div className="chat-friend-list flex-1 overflow-y-auto">
           {groupRooms.length === 0 ? (
-            <div className="p-4 text-center text-slate-500 text-sm">
+            <div className="p-4 text-center theme-muted text-sm">
               暂无房间，点击右上角创建
             </div>
           ) : (
@@ -390,8 +416,8 @@ export default function Contact() {
                 >
                   <span className="mr-3 icon-only">{getRoomIcon(room.name)}</span>
                   <div className="flex-1 text-left">
-                    <p className="text-sm font-medium text-slate-900">{room.name}</p>
-                    <p className="text-xs text-slate-500">{room.description}</p>
+                    <p className="text-sm font-medium text-inherit">{room.name}</p>
+                    <p className="text-xs theme-muted">{room.description}</p>
                   </div>
                   {isCurrent && (
                     <span className="text-xs text-cyan-700 font-medium">当前</span>
@@ -403,10 +429,10 @@ export default function Contact() {
         </div>
 
         {/* 底部用户信息 */}
-        <div className="chat-userbar h-14 flex items-center justify-between px-4">
+            <div className="chat-userbar h-14 flex items-center justify-between px-4">
           <div className="flex items-center">
             <span className={`mr-2 ${getStatusDotClass(status)}`} />
-            <span className="text-sm font-medium text-slate-700">{username}</span>
+            <span className="text-sm font-medium theme-muted">{username}</span>
           </div>
           <button
             onClick={() => setShowLogoutConfirm(true)}
@@ -418,12 +444,12 @@ export default function Contact() {
       </div>
 
       {/* 右侧聊天区域 */}
-      <div className="chat-main flex-1 flex flex-col">
+      <div className={`${showChatPanel ? 'flex' : 'hidden md:flex'} chat-main flex-1 min-h-0 flex-col`}>
         {/* 顶部导航栏 */}
         <div className="chat-topnav h-14 flex items-center justify-between px-6">
           <div className="flex items-center space-x-4">
             <span className="topbar-title icon-label"><Users size={16} />群聊</span>
-            <nav className="flex items-center space-x-2">
+            <nav className="no-scrollbar hidden md:flex items-center space-x-2 overflow-x-auto pr-1">
               <Link
                 to="/"
                 className="nav-pill"
@@ -447,7 +473,7 @@ export default function Contact() {
               </Link>
             </nav>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="hidden md:flex items-center space-x-2">
             <span className={`text-sm ${getStatusColor()}`}>
               <span className={`inline-block mr-1.5 align-middle ${getStatusDotClass(status)}`} />
               {status === 'online' ? '在线' :
@@ -462,14 +488,23 @@ export default function Contact() {
           <div className="flex items-center">
             {currentRoom ? (
               <>
+                {isMobile && (
+                  <button
+                    onClick={handleBackToRoomList}
+                    className="mr-2 rounded-full p-1 theme-muted hover:bg-white/60"
+                    title="返回房间列表"
+                  >
+                    <ArrowLeft size={16} />
+                  </button>
+                )}
                 <span className="mr-2 icon-only">{getRoomIcon(currentRoom)}</span>
-                <span className="font-semibold text-slate-900">{currentRoom}</span>
+                <span className="font-semibold text-inherit">{currentRoom}</span>
                 <span className={`ml-3 text-sm ${getStatusColor()}`}>
                   {getStatusText()}
                 </span>
               </>
             ) : (
-              <span className="text-slate-500">选择一个群聊房间</span>
+              <span className="theme-muted">选择一个群聊房间</span>
             )}
           </div>
 
@@ -500,7 +535,7 @@ export default function Contact() {
         </div>
 
         {/* 消息列表 */}
-        <div className="chat-thread flex-1 overflow-y-auto p-6">
+        <div ref={messageContainerRef} onScroll={handleScroll} className="chat-thread relative flex-1 overflow-y-auto p-3 md:p-6">
           {currentRoom ? (
             currentMessages.length === 0 ? (
               <div className="h-full flex items-center justify-center text-slate-400">
@@ -530,7 +565,7 @@ export default function Contact() {
                           <span className="font-medium">{msg.from_user}</span>
                         </p>
                       )}
-                      <p className="text-sm">{msg.content}</p>
+                      <MarkdownMessage content={msg.content} />
                       <div className={`msg-meta ${msg.is_own ? 'msg-meta-own' : 'msg-meta-other'}`}>
                         <p>{msg.timestamp}</p>
                       </div>
@@ -549,11 +584,21 @@ export default function Contact() {
               </div>
             </div>
           )}
+
+          {currentRoom && showScrollButton && (
+            <button
+              onClick={() => scrollToBottom('smooth')}
+              className="absolute bottom-4 right-4 rounded-full bg-slate-900/80 p-2 text-white shadow-lg transition hover:bg-slate-800"
+              title="回到底部"
+            >
+              <ChevronDown size={16} />
+            </button>
+          )}
         </div>
 
         {/* 输入框 */}
         {currentRoom && (
-          <div className="chat-composer p-4">
+          <div className="chat-composer sticky bottom-0 z-10 p-3 md:p-4">
             <div className="flex items-end space-x-3">
               <textarea
                 ref={inputRef}
@@ -562,7 +607,7 @@ export default function Contact() {
                 onKeyDown={handleKeyDown}
                 placeholder="输入消息... (Enter 发送，Shift+Enter 换行)"
                 rows={1}
-                className="flex-1 resize-none rounded-xl border border-white/60 bg-white/85 px-4 py-3 text-slate-900 shadow-sm outline-none transition-all focus:border-cyan-400 focus:bg-white focus:ring-2 focus:ring-cyan-200"
+                className="flex-1 resize-none rounded-xl border theme-divider theme-surface px-4 py-3 text-base md:text-sm text-inherit shadow-sm outline-none transition-all focus:border-cyan-400 focus:bg-white focus:ring-2 focus:ring-cyan-200"
                 style={{ minHeight: '48px', maxHeight: '120px' }}
               />
               <button
@@ -576,6 +621,8 @@ export default function Contact() {
           </div>
         )}
       </div>
+
+      <MobileTabBar />
 
       {/* 创建房间模态框 */}
       {showCreateRoomModal && (
@@ -632,7 +679,7 @@ export default function Contact() {
         <div className="modal-overlay">
           <div className="modal-card max-w-sm">
             <h3 className="modal-title mb-2">确认退出</h3>
-            <p className="text-slate-600 mb-6">确定要退出登录吗？</p>
+            <p className="theme-muted mb-6">确定要退出登录吗？</p>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setShowLogoutConfirm(false)}

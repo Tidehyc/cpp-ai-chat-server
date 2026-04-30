@@ -21,6 +21,13 @@ function resolveDefaultWebSocketUrl(): string {
     return 'ws://127.0.0.1:8080'
   }
 
+  // In local Vite dev, connect directly to backend to avoid proxy/path mismatch.
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    if (window.location.port === '5173') {
+      return 'ws://127.0.0.1:8080'
+    }
+  }
+
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   return `${protocol}//${window.location.host}/ws`
 }
