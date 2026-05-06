@@ -63,6 +63,17 @@ src/server/connection.cpp
 - [ ] 如需更强审计，可把 moderation_events 暴露给后台接口或导出脚本。
 - [ ] 如需更细权限，可继续拆分管理员角色为更精细权限位。
 
+## 📅 2026-05-06 - 前端依赖安全修复与收尾
+
+- **PR**: https://github.com/Tidehyc/cpp-ai-chat-server/pull/7
+- **变更**: 升级 `frontend` 运行时依赖：`axios` -> `^1.16.0`、`react-syntax-highlighter` -> `^16.1.1`；同时更新 `package-lock.json`。
+- **验证**:
+  - `npm audit`（升级前）: 14 个已知漏洞（7 high, 7 moderate）
+  - 运行 `npm audit fix --package-lock-only` + `npm install` 后（本次 PR）: 漏洞数量下降，生产依赖剩余少数 moderate 项（详见 PR 输出）
+  - `npm run build` 成功（vite 构建通过，生成 dist/）
+- **结论**: 已修复关键运行时漏洞；若需把开发/工具链中剩余的 high 漏洞清零（例如 `@typescript-eslint/*`、`vite` 的 major 升级），建议另开 PR 分批升级并做兼容性验证。
+- **下一步**: 若同意，合并此 PR 以完成本次收尾；将剩余 dev 依赖升级列为后续任务。
+
 ## 📅 2026-04-28 (第 54 天) - B3 性能门禁稳态化收口 ✅
 
 ### 完成的工作
