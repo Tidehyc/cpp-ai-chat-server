@@ -9,6 +9,55 @@
 
 using namespace chat;
 
+namespace
+{
+
+    int read_schema_version(sqlite3 *db, const char *key)
+    {
+        const char *sql = "SELECT value FROM schema_meta WHERE key = ?";
+        sqlite3_stmt *stmt = nullptr;
+        if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK)
+        {
+            return -1;
+        }
+
+        sqlite3_bind_text(stmt, 1, key, -1, SQLITE_STATIC);
+
+        int version = -1;
+        if (sqlite3_step(stmt) == SQLITE_ROW)
+        {
+            version = sqlite3_column_int(stmt, 0);
+        }
+
+        sqlite3_finalize(stmt);
+        return version;
+    }
+
+    int count_column(sqlite3 *db, const std::string &table_name, const std::string &column_name)
+    {
+        const std::string sql = "PRAGMA table_info(" + table_name + ")";
+        sqlite3_stmt *stmt = nullptr;
+        if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK)
+        {
+            return 0;
+        }
+
+        int count = 0;
+        while (sqlite3_step(stmt) == SQLITE_ROW)
+        {
+            const char *name = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
+            if (name && column_name == name)
+            {
+                ++count;
+            }
+        }
+
+        sqlite3_finalize(stmt);
+        return count;
+    }
+
+} // namespace
+
 static std::string legacy_sha256(const std::string &text)
 {
     unsigned char hash[SHA256_DIGEST_LENGTH];
@@ -79,6 +128,31 @@ TEST_F(UserManagerTest, UserLogin)
     // 不存在的用户登录失败
     LoginResult result3 = user_manager_->login("nonexistent", "123456", user);
     EXPECT_EQ(result3, LoginResult::USER_NOT_FOUND);
+}
+
+TEST_F(UserManagerTest, BannedUserCannotLogin)
+{
+    user_manager_->register_user("testuser", "123456");
+
+    User user = user_manager_->get_user_by_name("testuser");
+    ASSERT_TRUE(user.is_valid());
+    ASSERT_TRUE(user_manager_->update_status(user.id, "banned"));
+
+    User login_user;
+    LoginResult result = user_manager_->login("testuser", "123456", login_user);
+    EXPECT_EQ(result, LoginResult::BANNED);
+}
+
+TEST_F(UserManagerTest, AdminUserGetsAdminRole)
+{
+    ASSERT_TRUE(user_manager_->register_user("admin", "123456"));
+
+    User admin = user_manager_->get_user_by_name("admin");
+    ASSERT_TRUE(admin.is_valid());
+    EXPECT_EQ(admin.role, "admin");
+    EXPECT_TRUE(user_manager_->is_admin_user("admin"));
+    EXPECT_EQ(read_schema_version(db_->get_db(), "users_schema_version"), 2);
+    EXPECT_EQ(count_column(db_->get_db(), "users", "role"), 1);
 }
 
 // 测试用户状态更新

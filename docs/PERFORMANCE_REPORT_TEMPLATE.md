@@ -12,6 +12,8 @@
 
 - PERF_WARN_RATIO：
 - PERF_WARN_FAIL：
+- gate_mode：strict / warn-only
+- gate_source：env / cli / workflow
 - 当前门禁模式：main/release 严格门禁 or feature 告警模式
 - 阈值来源：默认 / 本次临时覆盖 / 已变更策略
 - 策略文档：`docs/PERF_GATE_CHANGE_POLICY.md`

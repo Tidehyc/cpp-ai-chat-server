@@ -39,17 +39,28 @@ jobs:
         run: |
           PERF_WARN_RATIO="0.80"
           PERF_WARN_FAIL="0"
+          GATE_SOURCE="cli"
 
           # Strict gate for main branch and PRs targeting main.
           if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
             PERF_WARN_FAIL="1"
+            GATE_SOURCE="workflow"
           fi
           if [[ "${GITHUB_EVENT_NAME}" == "pull_request" && "${GITHUB_BASE_REF}" == "main" ]]; then
             PERF_WARN_FAIL="1"
+            GATE_SOURCE="workflow"
+          fi
+
+          if [[ "${PERF_WARN_FAIL}" == "1" ]]; then
+            GATE_MODE="strict"
+          else
+            GATE_MODE="warn-only"
           fi
 
           echo "PERF_WARN_RATIO=${PERF_WARN_RATIO}" >> "$GITHUB_ENV"
           echo "PERF_WARN_FAIL=${PERF_WARN_FAIL}" >> "$GITHUB_ENV"
+          echo "GATE_MODE=${GATE_MODE}" >> "$GITHUB_ENV"
+          echo "GATE_SOURCE=${GATE_SOURCE}" >> "$GITHUB_ENV"
           echo "Resolved PERF_WARN_FAIL=${PERF_WARN_FAIL} (event=${GITHUB_EVENT_NAME}, ref=${GITHUB_REF}, base_ref=${GITHUB_BASE_REF})"
 
       - name: Run backend checks
@@ -98,9 +109,13 @@ jobs:
         run: |
           echo "## Backend Checks Status" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- PERF_WARN_RATIO: ${{ env.PERF_WARN_RATIO }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- exit_code: ${{ steps.backend_checks.outputs.exit_code }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- category: ${{ steps.backend_checks.outputs.failure_category }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- next_action: ${{ steps.backend_checks.outputs.failure_hint }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- PERF_WARN_FAIL: ${{ env.PERF_WARN_FAIL }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- gate_mode: ${{ env.GATE_MODE }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- gate_source: ${{ env.GATE_SOURCE }}" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Show benchmark summary

@@ -238,12 +238,14 @@ cpp-ai-chat-server/
 - [docs/DOCKER_GUIDE.md](docs/DOCKER_GUIDE.md) - Docker 部署指南
 
 ### 开发文档
+- [docs/INDEX.md](docs/INDEX.md) - docs 总索引（推荐从这里进入）
 - [docs/devlog.md](docs/devlog.md) - 开发日志
 - [docs/PRODUCT_LAUNCH_PLAYBOOK.md](docs/PRODUCT_LAUNCH_PLAYBOOK.md) - 产品化分阶段上线路线与验收清单
 - [docs/BACKEND_TODO_CHECKLIST.md](docs/BACKEND_TODO_CHECKLIST.md) - 后端代办清单（按优先级执行）
 - [docs/CONTRIBUTING_BACKEND.md](docs/CONTRIBUTING_BACKEND.md) - 后端标准提交流程与本地自检
 - [docs/PERFORMANCE_REPORT_TEMPLATE.md](docs/PERFORMANCE_REPORT_TEMPLATE.md) - 性能报告模板
 - [docs/perf_reports/PERFORMANCE_BASELINE_20260425.md](docs/perf_reports/PERFORMANCE_BASELINE_20260425.md) - 性能基线记录
+- [docs/perf_reports/perf_gate_changes/](docs/perf_reports/perf_gate_changes/) - 性能门禁阈值调整记录目录
 - [docs/perf_reports/concurrent_connections_20260425.md](docs/perf_reports/concurrent_connections_20260425.md) - 并发压测记录
 - [docs/perf_reports/concurrency_test_matrix_20260425.md](docs/perf_reports/concurrency_test_matrix_20260425.md) - 并发参数矩阵（日常回归 200 / 300 / 600）
 - [docs/PERF_GATE_CHANGE_POLICY.md](docs/PERF_GATE_CHANGE_POLICY.md) - 性能门禁阈值治理策略
@@ -252,10 +254,7 @@ cpp-ai-chat-server/
 - [scripts/verify_restore_db.sh](scripts/verify_restore_db.sh) - 数据库恢复后一键验证脚本
 - [docs/BRANCH_PROTECTION_REQUIRED_CHECKS.md](docs/BRANCH_PROTECTION_REQUIRED_CHECKS.md) - 分支保护与必过检查配置
 - [docs/BRANCH_PROTECTION_RELEASE_TEMPLATE.md](docs/BRANCH_PROTECTION_RELEASE_TEMPLATE.md) - release 分支保护模板
-- [docs/study_notes.md](docs/study_notes.md) - 学习笔记
-- [docs/study_notes_phase5.2.md](docs/study_notes_phase5.2.md) - 阶段 5.2 学习笔记
-- [docs/study_notes_phase5.3.md](docs/study_notes_phase5.3.md) - 阶段 5.3 学习笔记
-- [docs/study_notes_phase5.4.md](docs/study_notes_phase5.4.md) - 阶段 5.4 学习笔记
+- [docs/STUDY_NOTES_INDEX.md](docs/STUDY_NOTES_INDEX.md) - 学习笔记总览
 
 ---
 
@@ -312,6 +311,8 @@ python3 scripts/summarize_perf_reports.py
 
 说明：`scripts/run_backend_checks.sh` 已在基准执行后自动调用该汇总脚本；当前规则会在最新 speedup 低于历史均值的 80% 时输出 warning。
 
+汇总摘要会同时记录 `PERF_WARN_RATIO`、`PERF_WARN_FAIL`、`gate_mode` 和 `gate_source`，便于和 GitHub Actions 的 Job Summary 对齐。
+
 可选门禁（默认关闭，不影响本地日常检查）：
 
 ```bash
@@ -321,6 +322,8 @@ PERF_WARN_FAIL=1 PERF_WARN_RATIO=0.80 bash scripts/run_backend_checks.sh
 - `PERF_WARN_FAIL=1`：当触发 warning 时返回非 0 退出码。
 - `PERF_WARN_RATIO`：阈值比例，取值范围 `(0, 1]`。
 
+阈值与门禁治理说明见 [docs/PERF_GATE_CHANGE_POLICY.md](docs/PERF_GATE_CHANGE_POLICY.md) 和 [docs/PERFORMANCE_REPORT_TEMPLATE.md](docs/PERFORMANCE_REPORT_TEMPLATE.md)。
+
 ### CI 自动检查（GitHub Actions）
 
 - 工作流文件：`.github/workflows/backend-checks.yml`
@@ -328,6 +331,7 @@ PERF_WARN_FAIL=1 PERF_WARN_RATIO=0.80 bash scripts/run_backend_checks.sh
 - 执行内容：与本地脚本 `scripts/run_backend_checks.sh` 一致（构建 + CTest + 性能基准）
 - 产物：自动上传 `docs/perf_reports/*.txt` 以及 `message_history_benchmark_summary.md/csv` 作为 workflow artifact
 - 可见性：同时将 summary 输出到 Actions log 与 Job Summary 页面
+- Job Summary 还会显示 `PERF_WARN_RATIO`、`PERF_WARN_FAIL`、`gate_mode`、`gate_source`
 - 告警门禁策略：
   - `main` 分支（push）与目标为 `main` 的 PR：启用 `PERF_WARN_FAIL=1`（触发 warning 即失败）
   - 其他分支：默认 `PERF_WARN_FAIL=0`（仅告警，不阻断）

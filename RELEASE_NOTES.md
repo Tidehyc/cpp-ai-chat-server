@@ -1,3 +1,29 @@
+# Release Notes - v1.1.4 (Draft)
+
+_发布日期：2026-04-27（待 perf-gate 修复分支合并后生效）_
+
+---
+
+## ⚙️ CI 与性能门禁修复
+
+- **修复 perf-gate 分类误判** - 将性能门禁告警与失败语义拆分，避免错误分类导致阻断。
+- **稳定 benchmark gate 与 csv 输出** - 统一基准汇总输出口径，降低门禁波动带来的误杀风险。
+
+关联提交（待并入 main）：
+
+- `6a2a8da` - `fix(ci): classify perf gate warnings correctly`
+- `8c6b623` - `fix(perf): stabilize benchmark gate and csv output`
+
+## 📚 文档治理与上线执行链补齐
+
+- 收敛 docs 主入口与学习笔记入口，建立索引与归档结构。
+- 将 Product Launch Playbook 收敛到阶段 B，并补齐参数模板、部署范本、上线日作战清单。
+- 让发布回滚手册与 Playbook 时间轴对齐，增加按小时执行步骤与记录模板。
+
+说明：本段为发布草稿，最终条目以 PR 合并结果与发布记录为准。
+
+---
+
 # Release Notes - v1.1.3
 
 _发布日期：2026-04-24_
@@ -297,11 +323,10 @@ npm run dev
 ## 📖 文档
 
 - [README.md](README.md) - 项目说明
+- [docs/INDEX.md](docs/INDEX.md) - docs 总索引
 - [docs/DOCKER_GUIDE.md](docs/DOCKER_GUIDE.md) - Docker 部署指南
 - [docs/devlog.md](docs/devlog.md) - 开发日志
-- [docs/study_notes_phase5.2.md](docs/study_notes_phase5.2.md) - 阶段 5.2 学习笔记
-- [docs/study_notes_phase5.3.md](docs/study_notes_phase5.3.md) - 阶段 5.3 学习笔记
-- [docs/study_notes_phase5.4.md](docs/study_notes_phase5.4.md) - 阶段 5.4 学习笔记
+- [docs/STUDY_NOTES_INDEX.md](docs/STUDY_NOTES_INDEX.md) - 学习笔记总览
 
 ---
 

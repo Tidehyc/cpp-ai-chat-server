@@ -318,6 +318,7 @@ location /ws {
 ## 监控与告警（已提供模板）
 
 生产编排已内置监控栈：Prometheus + Grafana + node-exporter + blackbox-exporter。
+告警投递链路为：Alertmanager -> Feishu relay -> 飞书自定义机器人。
 
 ### 启动方式
 
@@ -329,6 +330,7 @@ docker-compose -f docker-compose.prod.yml up -d --build
 
 - Grafana: `http://127.0.0.1:3000`
 - Prometheus: `http://127.0.0.1:9090`
+- Feishu relay: `http://127.0.0.1:18088/health`
 
 默认 Grafana 账号从环境变量读取：
 
@@ -359,6 +361,15 @@ docker-compose -f docker-compose.prod.yml up -d --build
 - [monitoring/prometheus/prometheus.yml](../monitoring/prometheus/prometheus.yml)
 - [monitoring/prometheus/alerts.yml](../monitoring/prometheus/alerts.yml)
 - [monitoring/blackbox/blackbox.yml](../monitoring/blackbox/blackbox.yml)
+- [monitoring/alertmanager/alertmanager.yml](../monitoring/alertmanager/alertmanager.yml)
+- [scripts/alertmanager_feishu_relay.py](../scripts/alertmanager_feishu_relay.py)
+
+### 告警消息格式说明
+
+Alertmanager 发给 relay 的是它自己的 webhook payload，不是飞书机器人可直接识别的 JSON。
+relay 会把告警摘要转换为飞书自定义机器人支持的 `msg_type=text` 格式，再转发到飞书。
+
+如果你更换了飞书机器人 URL，请同步更新 `FEISHU_WEBHOOK_URL` 环境变量；默认值可在 `docker-compose.prod.yml` 中覆盖。
 
 ---
 

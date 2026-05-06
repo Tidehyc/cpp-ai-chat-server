@@ -133,6 +133,7 @@ endif()
 add_executable(chat_server_test
     tests/test_database_migration.cpp
     tests/test_user_manager.cpp
+    tests/test_connection_moderation.cpp
     tests/test_room_manager.cpp
     tests/test_message_history.cpp
     tests/test_message_protocol.cpp
@@ -140,10 +141,15 @@ add_executable(chat_server_test
     tests/test_offline_message_delivery.cpp
     tests/test_conversation.cpp
     tests/test_rate_limiter.cpp
+    src/server/connection.cpp
     src/storage/database.cpp
+    src/protocol/websocket.cpp
     src/ai/ai_client.cpp
+    src/command/command_dispatcher.cpp
     src/user/user_manager.cpp
     src/room/room_manager.cpp
+    src/preset/preset_manager.cpp
+    src/friend/friend_manager.cpp
     src/utils/logger.cpp
     src/utils/rate_limiter.cpp
     src/history/message_history.cpp

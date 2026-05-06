@@ -1,182 +1,129 @@
 # 后端代办清单（Backend TODO Checklist）
 
-_版本：v1.2.0（完成）_
-_更新日期：2026-04-22_
+_版本：v1.3.0（当前）_
+_更新日期：2026-04-23_
 
 ---
 
 ## 说明
 
-本清单聚焦后端可执行改进项，按优先级排序。
+本清单承接 v1.2.0 完成后的下一阶段工作，重点从“功能可用”转向“流程规范化 + 发布治理 + 可观测性增强”。
 
-- 🔴 P0：先做，影响稳定性或安全性
-- 🟡 P1：次优先，影响性能和可维护性
-- 🟢 P2：持续优化项
+- 🔴 P0：必须优先完成，直接影响受保护分支协作与发布风险
+- 🟡 P1：质量增强项，提升可维护性和告警可操作性
+- 🟢 P2：持续优化项，降低长期维护成本
 
 ---
 
 ## 🔴 P0（先做）
 
-### 1. 密码存储升级为带盐哈希
+### 1. 贡献流程标准化（受保护分支模型）
 
-- [x] 设计密码字段升级方案（salt + hash）
-- [x] 实现注册/登录兼容逻辑
-- [x] 为旧用户提供平滑迁移策略
-- [x] 新增单元测试覆盖正常/异常登录
+- [x] 在贡献文档明确“feature branch -> PR -> required checks -> merge”
+- [x] 统一 PR 模板（变更范围、验证命令、风险说明、回滚方案）
+- [x] 补充规则命名常见差异说明（workflow/job 展示名）
+- [x] 增加最小自检命令清单（本地可复现实操）
 
-**涉及模块**：`src/user/user_manager.cpp`
+**涉及模块**：`README.md`, `docs/BRANCH_PROTECTION_REQUIRED_CHECKS.md`, 新增 `docs/CONTRIBUTING_BACKEND.md`
 
 **验收标准**：
 
-- 数据库不再存储纯 SHA256 结果
-- 新老账号均可登录
-- 测试通过且不破坏现有注册流程
+- 新成员可按文档独立完成一次标准 PR 提交流程
+- 文档中包含可直接复制执行的命令，不依赖口头传达
 
 ---
 
-### 2. 补全消息协议序列化实现
+### 2. Release 分支保护模板落地
 
-- [x] 明确消息对象与 JSON 协议字段映射
-- [x] 实现消息序列化/反序列化
-- [x] 添加非法输入和缺字段防御
-- [x] 补充协议层单元测试
+- [x] 为 `release/*` 设计与 `main` 一致的 required checks 基线
+- [x] 输出“主分支/发布分支”差异化规则建议（如是否必须 up-to-date）
+- [x] 形成仓库设置清单（便于仓库管理员逐项核对）
 
-**涉及模块**：`src/protocol/message.cpp`
-
-**验收标准**：
-
-- 协议转换逻辑可用且可回归测试
-- 非法报文不会导致崩溃
-
----
-
-### 3. 离线消息读写一致性（事务化）
-
-- [x] 将离线消息拉取与已读更新纳入事务策略
-- [x] 失败场景支持回滚或重试
-- [x] 明确“推送成功”与“标记已读”顺序
-- [x] 增加回归测试用例（部分失败场景）
-
-**涉及模块**：`src/server/connection.cpp`, `src/friend/offline_message_delivery.cpp`, `tests/test_offline_message_delivery.cpp`
+**涉及模块**：`docs/BRANCH_PROTECTION_REQUIRED_CHECKS.md`, 新增 `docs/BRANCH_PROTECTION_RELEASE_TEMPLATE.md`
 
 **验收标准**：
 
-- 不出现“推送失败但已读”或“重复推送”异常
-- 事务边界清晰且日志可追踪
-
----
-
-### 4. 异步 AI 回调线程安全审计
-
-- [x] 梳理 AI 异步回调线程与连接线程模型
-- [x] 确保发送与状态变更在安全上下文执行
-- [x] 修复潜在竞态访问
-- [x] 增加并发场景稳定性验证
-
-**涉及模块**：`src/ai/ai_client.cpp`, `src/server/connection.cpp`, `tests/test_ai_client.cpp`
-
-**验收标准**：
-
-- 并发请求下无崩溃、无明显数据竞争
-- 消息发送时序稳定
+- 文档可覆盖 `main` 与 `release/*` 两类规则配置
+- 至少一次 release 分支规则人工核对演练
 
 ---
 
 ## 🟡 P1（次优先）
 
-### 5. 历史与搜索 SQL 优化
+### 3. CI 失败分层与动作指引
 
-- [x] 梳理 history/search 热路径 SQL
-- [x] 增加必要复合索引
-- [x] 对比优化前后耗时
-- [x] 新增性能回归测试（基础样本）
+- [x] 将 backend-checks 失败原因分层：构建失败 / 测试失败 / 性能门禁失败
+- [x] 在 Job Summary 中输出“下一步处理建议”
+- [x] 统一失败退出码语义并写入文档
 
-**涉及模块**：`src/history/message_history.cpp`, `src/storage/database.cpp`
+**涉及模块**：`.github/workflows/backend-checks.yml`, `scripts/run_backend_checks.sh`, `scripts/summarize_perf_reports.py`, `README.md`
 
-**结果记录（2026-04-22）**：
+**验收标准**：
 
-- 基准脚本：`python3 scripts/benchmark_message_history.py`
-- 样本规模：50,000 行消息，100 轮查询
-- 有索引总耗时：27.42 ms（avg 0.2742 ms）
-- 无索引总耗时：2243.97 ms（avg 22.4397 ms）
-- 速度提升：约 81.83x
-
-**回归测试**：
-
-- `MessageHistoryTest.SearchPerformanceBaselineWithIndex`
-- `MessageHistoryTest.SearchPerformanceRegressionIndexedShouldNotBeWorseThanNoIndex`
+- 失败时可在 Job Summary 一眼定位类别
+- 不同失败类别至少各有 1 条可执行修复建议
 
 ---
 
-### 6. 规范数据库迁移流程
+### 4. 性能门禁阈值治理与变更流程
 
-- [x] 增加 schema_version 管理
-- [x] 统一迁移入口与执行顺序
-- [x] 保证重复启动可幂等
-- [x] 补充迁移回归测试
+- [x] 定义门禁阈值变更流程（谁可改、何时改、如何记录）
+- [x] 增加阈值调整记录模板（含变更理由与影响评估）
+- [x] 将阈值策略与趋势报告模板联动
 
-**涉及模块**：`src/storage/database.cpp`, `src/user/user_manager.cpp`
+**涉及模块**：`README.md`, `docs/PERFORMANCE_REPORT_TEMPLATE.md`, 新增 `docs/PERF_GATE_CHANGE_POLICY.md`
 
----
+**验收标准**：
 
-### 7. 日志脱敏与分级收敛
-
-- [x] 审计日志中敏感内容输出
-- [x] 默认隐藏用户隐私与消息正文
-- [x] debug/info/warn/error 输出边界统一
-- [x] 更新相关调试文档
-
-**涉及模块**：`src/server/connection.cpp`, `src/utils/logger.cpp`
+- 任一阈值变更都可追溯（理由、时间、执行人）
+- 报告模板中包含阈值上下文信息
 
 ---
 
 ## 🟢 P2（持续优化）
 
-### 8. 后端测试覆盖补强
+### 5. 例行巡检自动化脚本
 
-- [x] 补充离线消息边界测试
-- [x] 补充登录异常流测试
-- [x] 补充搜索边界与空结果测试
-- [x] 补充并发连接稳定性测试
+- [x] 新增轻量巡检脚本（检查工作流文件、门禁参数、关键文档链接一致性）
+- [x] 输出机器可读结果（0/1 + 简要报告）
+- [x] 接入本地 pre-release 自检说明
 
-**涉及模块**：`tests/test_user_manager.cpp`, `tests/test_message_history.cpp`, `tests/test_offline_messages.sh`
+**涉及模块**：新建 `scripts/audit_backend_governance.sh`, `README.md`
+
+**验收标准**：
+
+- 一条命令可完成治理配置健康检查
+- 巡检输出可直接贴到 PR 评论
 
 ---
 
-### 9. 命令处理模块解耦
+### 6. 文档版本一致性治理
 
-- [x] 拆分 `Connection` 中过重命令逻辑
-- [x] 明确解析层与执行层职责
-- [x] 提升单命令可测试性
-- [x] 减少大函数维护复杂度
+- [x] 建立版本同步规则（README / RELEASE_NOTES / devlog）
+- [x] 在发布前核对版本号、日期、关键特性摘要一致
+- [x] 新增“发布文档核对清单”
 
-**涉及模块**：`src/server/connection.cpp`, `src/command/command_dispatcher.cpp`, `src/command/command_parser.cpp`
+**涉及模块**：`README.md`, `RELEASE_NOTES.md`, `docs/devlog.md`, 新增 `docs/RELEASE_DOC_CHECKLIST.md`
 
-**实现说明**：
+**验收标准**：
 
-- 新增 `CommandDispatcher` 类，负责解析层（从 "/" 前缀判断、分割 cmd_name + args）
-- `Connection::execute_command()` 负责执行层（30+ 个 if-else 分支路由）
-- 通过 `std::function<>` 回调模式解耦，避免循环依赖
-- 支持单个命令独立测试，命令执行时序清晰
+- 每次发布文档核对步骤固定化
+- 无“README 版本落后于 Release Notes”的情况
 
 ---
 
 ## 里程碑建议
 
-- 里程碑 A（本周）：完成 P0-1 和 P0-2
-- 里程碑 B（下周）：完成 P0-3 和 P0-4
-- 里程碑 C：推进 P1 并补齐关键测试
+- 里程碑 A（本周）：完成 P0-1、P0-2
+- 里程碑 B（下周）：完成 P1-3、P1-4
+- 里程碑 C（后续）：推进 P2 并形成发布前巡检流程
 
 ---
 
 ## 进度记录
 
-- [x] 2026-04-W4：P0 开始
+- [x] 2026-04-W4：v1.3 清单创建
 - [x] 2026-04-W5：P0 完成
-- [x] 2026-05-W1：P1 开始
-
----
-
-## 下一阶段
-
-- 下一阶段后端任务草案见：`docs/BACKEND_TODO_CHECKLIST_V1.3.md`
+- [x] 2026-05-W1：P1 完成（含 P1-3、P1-4）
+- [x] 2026-05-W2：P2-5 完成
+- [x] 2026-05-W2：P2-6 完成

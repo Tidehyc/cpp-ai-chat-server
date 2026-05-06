@@ -68,6 +68,56 @@ services:
         condition: service_started
       blackbox-exporter:
         condition: service_started
+      alertmanager:
+        condition: service_started
+    networks:
+      - chat_net
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: cpp-ai-chat-alertmanager
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    ports:
+      - "127.0.0.1:9093:9093"
+    depends_on:
+      feishu-relay:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - chat_net
+
+  feishu-relay:
+    image: python:3.11-slim
+    container_name: cpp-ai-chat-feishu-relay
+    restart: unless-stopped
+    command:
+      - python
+      - /app/scripts/alertmanager_feishu_relay.py
+      - --port
+      - "8088"
+    environment:
+      FEISHU_WEBHOOK_URL: ${FEISHU_WEBHOOK_URL:-https://open.feishu.cn/open-apis/bot/v2/hook/3e4e95e8-0233-48b9-83a1-0966420455e2}
+    volumes:
+      - ./scripts/alertmanager_feishu_relay.py:/app/scripts/alertmanager_feishu_relay.py:ro
+    ports:
+      - "127.0.0.1:18088:8088"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8088/health').read()
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
     networks:
       - chat_net
 
@@ -121,6 +171,7 @@ volumes:
   chat_data:
   prometheus_data:
   grafana_data:
+  alertmanager_data:
 
 networks:
   chat_net:

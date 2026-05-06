@@ -321,6 +321,27 @@ _测试日期：2026-04-03_
 
 ---
 
+## 八、专项回归：消息已读未读状态
+
+说明：原专项文档已并入主清单，后续统一在本节维护。
+
+- [ ] 数据库 `messages.is_read` 字段存在，默认值为未读（0）
+- [ ] 发送私聊后，发送方消息状态显示为未读（单勾）
+- [ ] 接收方进入对应会话后，发送方状态更新为已读（双勾）
+- [ ] 接收方在线且处于当前会话时，消息自动标记已读
+- [ ] `/read <username>` 手动标记已读可用
+- [ ] `/unread` 未读计数返回正确
+- [ ] `read_confirm` 消息触发前端状态更新
+- [ ] 数据库查询结果与界面状态一致（`is_read=0/1`）
+
+建议验证命令：
+
+```bash
+sqlite3 data/chat.db "SELECT id,from_user,to_user,is_read,timestamp FROM messages ORDER BY timestamp DESC LIMIT 20;"
+```
+
+---
+
 ## 测试环境信息
 
 | 项目 | 值 |

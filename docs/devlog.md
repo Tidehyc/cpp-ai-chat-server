@@ -2,6 +2,624 @@
 
 ---
 
+## 📅 2026-04-29 - 合并 PR #5 与集成/压力测试
+
+- **PR 合并**: 已合并 PR #5 “Fix moderation test harness and record validation”，并删除临时分支。
+- **CI 状态**: `backend-checks` 在包含缺失头与实现后重跑通过（所有检查成功）。
+- **本地压力测试**: 运行 `scripts/test_concurrent_connections.py`，结果：total=90, failed=0, success_rate=100.00%。
+- **本地单元测试**: `chat_server_test` 本地执行通过（48 tests 全部通过）。
+- **下一步建议**: 如需可触发更大规模的集成/负载测试或在 staging 部署验证。
+
+
+## 📅 2026-04-28 (第 54 天) - P2 运营能力最小集收口 ✅
+
+### 完成的工作
+
+- [x] 补齐用户封禁/解封：`/ban`、`/unban`
+- [x] 补齐举报处理：`/report`
+- [x] 补齐管理员广播：`/announce`
+- [x] 补齐审计追踪：`moderation_events` 表、`save_moderation_event`、`get_recent_moderation_events`
+- [x] 补齐查看入口：`/modlog [数量]`
+- [x] 补齐角色鉴权：`User.role`、会话角色同步、管理员命令鉴权
+
+### 问题背景
+
+- P2 的“运营能力最小集”原本还是计划态，需要一个能真正落地并留痕的最小闭环。
+- 仅有封禁命令不够，还需要举报、公告和查询入口，否则运维动作不可审计。
+
+### 根因分析
+
+1. 早期系统只有用户状态和在线状态，没有单独的运营操作轨迹。
+2. 管理动作依赖硬编码用户名判断，扩展性差。
+
+### 实现细节
+
+```text
+src/user/user_manager.*
+- 增加 role 字段并将 admin 持久化
+
+src/storage/database.*
+- 新增 moderation_events 表
+- 新增 save_moderation_event / get_recent_moderation_events
+
+src/server/connection.cpp
+- 增加 /ban /unban /report /announce /modlog
+```
+
+### 验证与证据
+
+- `DatabaseMigrationTest.ReportEventPersistsRow` 通过
+- `DatabaseMigrationTest.AnnounceEventPersistsRow` 通过
+- `DatabaseMigrationTest.RecentModerationEventsAreQueryable` 通过
+- `UserManagerTest.AdminUserGetsAdminRole` 通过
+
+### 踩坑与经验
+
+- 运营能力不要只停留在“有命令”，必须同时提供留痕和查询入口。
+- 角色鉴权应作为数据模型的一部分，而不是散落在命令分支里。
+
+### 后续优化
+
+- [ ] 如需更强审计，可把 moderation_events 暴露给后台接口或导出脚本。
+- [ ] 如需更细权限，可继续拆分管理员角色为更精细权限位。
+
+## 📅 2026-05-06 - 前端依赖安全修复与收尾
+
+- **PR**: https://github.com/Tidehyc/cpp-ai-chat-server/pull/7
+- **变更**: 升级 `frontend` 运行时依赖：`axios` -> `^1.16.0`、`react-syntax-highlighter` -> `^16.1.1`；同时更新 `package-lock.json`。
+- **验证**:
+  - `npm audit`（升级前）: 14 个已知漏洞（7 high, 7 moderate）
+  - 运行 `npm audit fix --package-lock-only` + `npm install` 后（本次 PR）: 漏洞数量下降，生产依赖剩余少数 moderate 项（详见 PR 输出）
+  - `npm run build` 成功（vite 构建通过，生成 dist/）
+- **结论**: 已修复关键运行时漏洞；若需把开发/工具链中剩余的 high 漏洞清零（例如 `@typescript-eslint/*`、`vite` 的 major 升级），建议另开 PR 分批升级并做兼容性验证。
+- **下一步**: 若同意，合并此 PR 以完成本次收尾；将剩余 dev 依赖升级列为后续任务。
+
+## 📅 2026-04-28 (第 54 天) - B3 性能门禁稳态化收口 ✅
+
+### 完成的工作
+
+- [x] 将性能报告模板与汇总脚本的门禁上下文对齐到 `PERF_WARN_RATIO / PERF_WARN_FAIL / gate_mode / gate_source`。
+- [x] 将 GitHub Actions `backend-checks` job summary 与本地脚本输出统一。
+- [x] 将门禁阈值治理策略、发布文档核对清单、README 入口和变更记录模板联动收口。
+- [x] 建立 `docs/perf_reports/perf_gate_changes/` 目录，并补充当前门禁口径草稿。
+- [x] 在 `README.md` 中补充性能汇总与 GitHub Actions Job Summary 的门禁上下文说明。
+- [x] 在 `docs/RELEASE_DOC_CHECKLIST.md` 中加入 `message_history_benchmark_summary.md` 的字段核对项。
+- [x] 在 `docs/perf_reports/PERF_GATE_CHANGE_RECORD_TEMPLATE.md` 中补齐 `gate_mode` / `gate_source` 与 job summary 证据位。
+
+### 问题背景
+
+- B3 的风险不在于“有没有阈值”，而在于“阈值、CI 输出、发布核对和记录模板是否说同一种话”。
+- 如果这些入口不一致，后续调整阈值时会出现口径漂移和审计缺口。
+
+### 根因分析
+
+1. 之前的门禁信息分散在脚本、workflow、模板与 README，各处字段命名不完全一致。
+2. 缺少一份统一的门禁口径记录，导致“当前策略”没有明确落点。
+
+### 实现细节
+
+```text
+scripts/summarize_perf_reports.py
+- 输出 PERF_WARN_FAIL、gate_mode、gate_source
+
+.github/workflows/backend-checks.yml
+- Job Summary 输出 PERF_WARN_RATIO / PERF_WARN_FAIL / gate_mode / gate_source
+
+docs/perf_reports/perf_gate_changes/20260428-current-gate-context.md
+- 记录当前门禁口径快照
+```
+
+### 验证与证据
+
+- `bash /home/tide/workplace/cpp-ai-chat-server/scripts/audit_backend_governance.sh` 通过。
+- `git diff --check` 通过。
+- `docs/perf_reports/message_history_benchmark_summary.md` 已显示门禁上下文字段。
+- `scripts/summarize_perf_reports.py` 已输出 `PERF_WARN_FAIL` 与 `gate_mode`。
+- `backend-checks` workflow job summary 已包含阈值、模式、来源字段。
+
+### 踩坑与经验
+
+- 门禁治理的关键不是“多一个字段”，而是“所有入口都能说同一种话”。
+- 记录目录和模板要先建立，再谈真实阈值变更，否则后续无法审计。
+
+### 后续优化
+
+- [ ] 在出现真实阈值调整时，补一份完整的变更记录样例。
+- [ ] 将 job summary 截图/输出纳入阈值调整的 PR 模板附件要求。
+
+---
+
+## 📅 2026-04-28 (第 54 天) - A3 发布 / 回滚演练收口 ✅
+
+### 完成的工作
+
+- [x] 执行 `./scripts/release_prod.sh a3-drill-20260428`，完成构建、部署、健康检查与发布记录落盘。
+- [x] 执行 `./scripts/rollback_prod.sh a3-drill-20260428`，完成容器回滚、重建、健康检查与回滚记录落盘。
+- [x] 将 A3 状态同步到 `docs/PRODUCT_LAUNCH_PLAYBOOK.md` 与 `docs/ROADMAP.md`。
+
+### 问题背景
+
+- A3 的目标不是只证明“能发版”，而是要证明“发版后还能按同一流程安全回退”。
+- 之前的状态仍停留在“准备中”，会让后续推进误判当前风险等级。
+
+### 根因分析
+
+1. 发布记录与路线图状态没有在演练完成后即时收口。
+2. 文档缺少一条清晰的“发布 -> 验证 -> 回滚 -> 恢复验证”完成证据链。
+
+### 实现细节
+
+```text
+docs/release_records/release-a3-drill-20260428.md
+- 记录发布时间、编排文件、健康检查命令和容器状态摘要
+
+docs/release_records/rollback-20260428-132706.md
+- 记录回滚时间、目标版本、健康检查命令和容器状态摘要
+```
+
+### 验证与证据
+
+- 发布脚本输出 `发布完成，记录已生成: docs/release_records/release-a3-drill-20260428.md`。
+- 回滚脚本输出 `回滚完成，记录已生成: docs/release_records/rollback-20260428-132706.md`。
+- 后端和前端健康检查均通过。
+
+### 踩坑与经验
+
+- 发布演练和回滚演练最好成对执行，否则“可回退”只停留在流程层面。
+- 演练完成后要立刻同步路线图，不然下一步优先级会被旧状态误导。
+
+### 后续优化
+
+- [ ] 将 A3 演练证据和回滚记录纳入每月例行检查。
+- [ ] 为 B3 的 perf-gate 稳态化准备门禁与回归基线。
+
+## 📅 2026-04-28 (第 54 天) - A2 告警链路修正（Alertmanager -> Feishu relay）✅
+
+### 完成的工作
+
+- [x] 纠正告警投递链路：Alertmanager 不再直连飞书机器人，改为先发到本地 relay。
+- [x] 新增 `scripts/alertmanager_feishu_relay.py`，把 Alertmanager webhook payload 转成飞书 text 消息。
+- [x] 在 `docker-compose.prod.yml` 中新增 `feishu-relay` 服务，并让 `alertmanager` 依赖其健康状态。
+- [x] 更新 `monitoring/alertmanager/alertmanager.yml`，将 warning / critical 目标改为 relay。
+
+### 为什么之前收不到
+
+- 飞书自定义机器人要求 `msg_type` / `content` 的消息格式。
+- Alertmanager 的 `webhook_configs` 发送的是它自己的告警 webhook payload，不能直接喂给飞书机器人。
+
+### 验证结果
+
+- `QuickTestWarning` / `QuickTestCritical` 都能进入 Alertmanager。
+- relay 已成功把告警转成飞书消息格式并返回 200。
+- 现在链路应为：`Prometheus -> Alertmanager -> feishu-relay -> 飞书`。
+
+### 剩余事项
+
+- [x] 若后续更换飞书机器人 URL，只需改 `FEISHU_WEBHOOK_URL`。
+
+---
+
+## 📅 2026-04-27 (第 53 天) - A2 可观测性补齐（error_code + 告警通道）✅
+
+### 完成的工作
+
+- [x] 在连接层新增结构化错误返回：`send_error_message(error_code, content, request_id, module)`。
+- [x] 为登录/消息/AI/DB 关键失败路径补齐 `error_code` 分类。
+- [x] Prometheus 接入 Alertmanager（`alertmanager:9093`）。
+- [x] 新增 Alertmanager 配置与 Webhook 路由模板（warning / critical）。
+- [x] 在生产编排中新增 `alertmanager` 服务并完成配置校验。
+- [x] 新增 A2 证据记录：`docs/release_records/a2-observability-alerting-20260427.md`。
+
+### 验证与证据
+
+- CMake 构建通过（`chat_server` 链接成功）。
+- `docker-compose -f docker-compose.prod.yml config` 校验通过。
+- `request_id + error_code` 在日志与错误返回中可追踪。
+
+### 剩余事项
+
+- [ ] 完成 warning / critical 各一次告警演练并留证。
+- [ ] 替换 Alertmanager 示例 Webhook URL 为真实告警网关地址。
+
+### 追加验证（同日）
+
+- [x] 启动 `alertmanager` 并完成 warning / critical 双告警注入演练。
+- [x] 通过 `api/v2/alerts` 确认告警已进入对应接收器（`webhook-warning` / `webhook-critical`）。
+- [x] 通过 Alertmanager 日志确认路由调度已执行。
+- [x] 本地演练网关（18081）收到 `/alerts/warning` 与 `/alerts/critical` 实际 POST，投递成功。
+- [ ] 将演练网关 URL 替换为真实生产告警网关，并复跑一次线上投递验证。
+ - [x] 已将演练网关替换为个人飞书机器人 Webhook 并完成二次投递验证（配置文件： monitoring/alertmanager/alertmanager.yml）。
+
+---
+
+## 📅 2026-04-27 (第 53 天) - A1 安全基线收尾（扫描与证据化）✅
+
+### 完成的工作
+
+- [x] 新增仓库级密钥扫描脚本：`scripts/scan_secrets.sh`。
+- [x] 执行扫描并确认当前工作区无高风险明文密钥命中。
+- [x] 验证 `.env` 未入库且 `.gitignore` 已覆盖 `.env`、`.env.local`、`.env.*.local`。
+- [x] 完成敏感日志抽样审计：未发现 token/API key 明文日志输出。
+- [x] 新建 A1 证据记录：`docs/release_records/a1-security-scan-20260427.md`。
+- [x] 同步更新 Playbook / Roadmap / Release checklist 对应条目。
+
+### 问题背景
+
+- A1 在路线与清单中长期处于“待完成”，但缺少可重复执行的扫描入口与留痕文件。
+
+### 根因分析
+
+1. 密钥治理依赖人工抽查，缺少统一命令与标准输出。
+2. 验证完成后未形成“证据文件 + 文档勾选”的闭环。
+
+### 实现细节
+
+1. **扫描脚本化**
+
+```text
+scripts/scan_secrets.sh
+- 统一高风险凭据正则
+- 默认扫描 Git 已入库文件（用于入库风险判定）
+- 支持 `--all-files` 扫描整个工作区（用于本地自检）
+- 默认排除 build/node_modules/docs/archive
+- 输出 SCAN_STATUS 与 SCAN_SUMMARY
+```
+
+2. **A1 证据化**
+
+```text
+docs/release_records/a1-security-scan-20260427.md
+- 记录扫描结果
+- 记录环境变量来源
+- 记录敏感日志审计结论
+```
+
+### 验证与证据
+
+- `tracked` 扫描结果：`SCAN_STATUS=OK`，`SCAN_SUMMARY=No secret-like patterns found (placeholders ignored)`。
+- `--all-files` 自检结果：`SCAN_STATUS=WARN`（命中本地 `.env` 与 `nginx/ssl/privkey.pem`，未入库）。
+- `.env` 入库检查：仅 `/.env.example` 在版本库内。
+- 日志审计：未发现 API key / token 明文日志输出。
+
+### 踩坑与经验
+
+- 单次扫描“无命中”不等于永久安全，必须纳入发布前固定检查。
+- 文档勾选必须和证据文件绑定，避免“已完成但不可复核”。
+
+### 后续优化
+
+- [ ] 追加历史提交扫描（`git log --all -p` 范围）并形成独立报告。
+- [ ] 将 `scan_secrets.sh` 纳入 CI 非阻断检查，先告警后逐步门禁化。
+
+---
+
+## 📅 2026-04-27 (第 53 天) - 主线收口准备（发布说明与核对记录）✅
+
+### 完成的工作
+
+- [x] 在 `RELEASE_NOTES.md` 新增 `v1.1.4 (Draft)` 发布说明草稿。
+- [x] 新建 `docs/release_records/release-prep-20260427.md`，沉淀收口核对记录。
+- [x] 在 `docs/ROADMAP.md` 将“同步发布说明与核对记录”子项勾选完成。
+
+### 问题背景
+
+- 当前 `copilot/perf-gate-fix-20260427` 尚未合并到 `main`，但收口前置文档与发布记录需要先完成，避免 PR 合并后再补文档导致口径漂移。
+
+### 根因分析
+
+1. 之前主线收口条目把“合并动作”和“说明文档”捆绑在一起，执行上容易拖延。
+2. 缺少一个“合并前已准备项”清单文件，导致收口动作可追踪性不足。
+
+### 实现细节
+
+1. **发布说明前置**
+
+```text
+RELEASE_NOTES.md 增加 v1.1.4 (Draft)
+覆盖 perf-gate 两个待合并提交与文档治理增量
+```
+
+2. **核对记录模板化**
+
+```text
+docs/release_records/release-prep-20260427.md
+包含：待合并提交、已完成准备项、合并前检查项、合并后收尾项
+```
+
+### 验证与证据
+
+- `v1.1.4 (Draft)` 已可作为 PR 说明来源。
+- `release-prep-20260427.md` 已形成收口执行清单。
+
+### 踩坑与经验
+
+- 合并前先写 release 草稿，可显著降低“合并后文档补写延迟”。
+- 将收口步骤拆成“合并前/合并后”更利于值班交接。
+
+### 后续优化
+
+- [ ] PR 合并后补充 merge commit 与 PR 链接到该记录。
+- [ ] 完成 Playbook 与 Roadmap 中剩余“主线收口”勾选项。
+
+---
+
+## 📅 2026-04-27 (第 53 天) - Playbook 与发布回滚手册执行链对齐 ✅
+
+### 完成的工作
+
+- [x] 将 `docs/RELEASE_ROLLBACK_RUNBOOK.md` 升级为 v1.1，并明确仅覆盖阶段 A+B。
+- [x] 增加按小时执行版（T-24h、T-4h、T-1h、T0、T+0.5h、T+2h）和建议命令。
+- [x] 增加发布/回滚记录模板，统一证据采集字段。
+- [x] 更新 `docs/RELEASE_DOC_CHECKLIST.md`，新增 runbook 与 Playbook 第 11 节一致性检查。
+
+### 问题背景
+
+- Playbook 已定义上线日按小时作战清单，但发布回滚手册仍偏“流程描述”，缺少同粒度执行步骤与命令化入口。
+- 文档核对清单未强制检查两份文档是否一致，存在执行口径漂移风险。
+
+### 根因分析
+
+1. 规划文档与执行手册迭代节奏不同步。
+2. 缺少“跨文档一致性”硬检查项，导致后续容易再次分叉。
+
+### 实现细节
+
+1. **runbook 命令化增强**
+
+```text
+新增第 10 节：按小时执行版 + 对应命令
+新增第 11 节：发布/回滚记录模板
+```
+
+2. **核对清单联动**
+
+```text
+新增检查项：RELEASE_ROLLBACK_RUNBOOK 是否覆盖 T-24h 至 T+2h
+新增检索命令：同时扫描 Playbook 与 runbook 的时间锚点
+```
+
+### 验证与证据
+
+- 文档语法检查通过（无错误）。
+- 关键命令入口均可直接复制执行。
+- 发布核对清单已包含 runbook 一致性检查项。
+
+### 踩坑与经验
+
+- 规划文档里的时间轴必须在执行手册中落到命令，不然值班时可操作性不足。
+- 一致性检查应前置到发布前清单，而不是靠人工记忆比对。
+
+### 后续优化
+
+- [ ] 将 runbook 的“建议命令”进一步拆分为一键脚本入口。
+- [ ] 在 release_records 模板中加入 perf-gate 与并发回归结果字段。
+
+---
+
+## 📅 2026-04-27 (第 53 天) - docs 第三轮收敛（归档分层 + 巡检接入）✅
+
+### 完成的工作
+
+- [x] 新建归档目录：`docs/archive/2026-04/`。
+- [x] 迁移历史文档到归档目录：Docker 最终测试报告、Launch Recap、Theme 修复总结。
+- [x] 在原路径保留迁移说明文件，兼容历史链接。
+- [x] 更新 `docs/INDEX.md`，新增“归档目录”章节并切换到归档入口。
+- [x] 扩展 `scripts/audit_backend_governance.sh`：新增 docs 索引/学习索引检查与索引内容一致性检查。
+
+### 问题背景
+
+- 主目录中“当前运行文档”与“历史复盘文档”混放，阅读与维护成本升高。
+- 文档索引虽然已建立，但缺少自动化巡检，后续容易回退到分散状态。
+
+### 根因分析
+
+1. 缺少按时间归档机制，历史文档长期滞留在主目录。
+2. 没有把索引一致性纳入治理脚本，入口规范依赖人工习惯。
+
+### 实现细节
+
+1. **归档策略**
+
+```text
+docs/archive/2026-04/
+  - DOCKER_FINAL_TEST_REPORT.md
+  - LAUNCH_RECAP_2026-04-24.md
+  - THEME_FIX_SUMMARY.md
+```
+
+2. **兼容策略**
+
+```text
+保留原路径同名文件，内容改为“文档迁移说明 + 新路径链接”
+```
+
+3. **巡检增强**
+
+```text
+新增检查项：docs/INDEX.md、docs/STUDY_NOTES_INDEX.md 是否存在
+新增检查项：README 是否链接 docs/INDEX.md
+新增检查项：索引中是否包含 Playbook / Roadmap / 主学习笔记入口
+```
+
+### 验证与证据
+
+- 运行 `bash scripts/audit_backend_governance.sh` 验证通过。
+- `docs/INDEX.md` 已可区分主文档与归档文档。
+- 历史路径仍可访问（通过迁移说明跳转）。
+
+### 踩坑与经验
+
+- 归档时不建议直接删除原路径，应先保留跳转说明，避免历史笔记断链。
+- 索引规范若不接入自动巡检，容易在多次迭代后失效。
+
+### 后续优化
+
+- [ ] 按月持续扩展 `docs/archive/YYYY-MM/` 归档目录。
+- [ ] 将“迁移说明文件数量”纳入季度文档清理任务，避免兼容文件无限增长。
+
+---
+
+## 📅 2026-04-27 (第 53 天) - docs 第二轮收敛（索引化 + 测试文档合并）✅
+
+### 完成的工作
+
+- [x] 新增 docs 总索引：`docs/INDEX.md`，统一主入口。
+- [x] 新增学习笔记索引：`docs/STUDY_NOTES_INDEX.md`，收敛 phase 笔记入口。
+- [x] 收敛 README/Release Notes 的分散文档链接到索引入口。
+- [x] 将“已读未读状态”专项测试并入 `docs/TEST_CHECKLIST.md`。
+- [x] 删除重复专项文档 `docs/TEST_READ_STATUS.md`。
+
+### 问题背景
+
+- docs 入口数量较多，阅读路径分散，维护者容易在多个同主题文档之间来回跳转。
+- 测试文档存在“主清单 + 专项清单”重复维护，长期会产生不一致。
+
+### 根因分析
+
+1. 缺少稳定的 docs 一级索引，导致 README/Release Notes 承担了过多导航职责。
+2. 专项测试文档在功能完成后未及时回收进主清单。
+
+### 实现细节
+
+1. **导航结构调整**
+
+```text
+README / RELEASE_NOTES -> docs/INDEX.md
+学习笔记入口 -> docs/STUDY_NOTES_INDEX.md
+```
+
+2. **测试文档收敛**
+
+```text
+docs/TEST_CHECKLIST.md 新增“专项回归：消息已读未读状态”
+删除 docs/TEST_READ_STATUS.md
+```
+
+### 验证与证据
+
+- 新索引文件已创建并可访问。
+- 旧专项测试文档已删除，主清单包含对应回归项。
+- 文档链接抽查通过，无构建/运行层面的影响。
+
+### 踩坑与经验
+
+- 文档去重应优先“并入主清单再删除”，避免回归步骤丢失。
+- 对外入口应尽量稳定，细分文档适合通过索引继续扩展。
+
+### 后续优化
+
+- [ ] 增加 docs 归档目录与命名规范（如 archive/YYYY-MM）。
+- [ ] 将 docs 索引一致性检查接入 `scripts/audit_backend_governance.sh`。
+
+---
+
+## 📅 2026-04-27 (第 53 天) - docs 文档去重与收敛治理 ✅
+
+### 完成的工作
+
+- [x] 合并重复后端清单：将 v1.3 内容并入 `docs/BACKEND_TODO_CHECKLIST.md` 作为统一主文档。
+- [x] 将 `docs/BACKEND_TODO_CHECKLIST_V1.3.md` 改为迁移说明，保留历史兼容链接。
+- [x] 删除明显过期且与当前状态冲突的 `docs/FINAL_SUMMARY.md`。
+- [x] 更新 `docs/RELEASE_DOC_CHECKLIST.md` 与 `docs/LAUNCH_RECAP_2026-04-24.md` 的旧路径引用。
+
+### 问题背景
+
+- docs 目录存在同主题多份文档并存，且版本命名不一致，导致入口分散、引用混乱。
+- 部分早期总结文档描述的项目结构和文档列表已与当前仓库状态不一致。
+
+### 根因分析
+
+1. 阶段性文档在后续迭代中未及时“收敛到主文档”，形成重复维护成本。
+2. 历史文档引用未统一升级，造成新旧路径并存。
+
+### 实现细节
+
+1. **后端清单收敛策略**
+
+```text
+主文档：docs/BACKEND_TODO_CHECKLIST.md
+兼容入口：docs/BACKEND_TODO_CHECKLIST_V1.3.md（迁移说明）
+```
+
+2. **过期文档处理策略**
+
+```text
+删除 docs/FINAL_SUMMARY.md（内容停留在早期阶段且含多处已删除文件引用）
+```
+
+### 验证与证据
+
+- 旧路径检索结果仅保留在兼容文件本身，不再散落在主流程文档中。
+- `docs/RELEASE_DOC_CHECKLIST.md` 已改为检查 `docs/BACKEND_TODO_CHECKLIST.md`。
+- 本次改动仅涉及 docs 文档层，不影响代码与构建流程。
+
+### 踩坑与经验
+
+- 文档治理应优先“合并主入口 + 保留迁移说明”，直接删除容易造成历史断链。
+- 对外入口文档（README/Checklist/Playbook）必须始终指向唯一主文档。
+
+### 后续优化
+
+- [ ] 继续清理 `study_notes*` 的分散结构，按“总览 + 分阶段索引”收敛。
+- [ ] 增加 docs 目录的 `INDEX.md`，明确主文档与历史归档边界。
+
+---
+
+## 📅 2026-04-27 (第 53 天) - 路线图与上线节奏对齐执行 ✅
+
+### 完成的工作
+
+- [x] 重构 `docs/ROADMAP.md`，将过期事项替换为当前上线风险闭环路线。
+- [x] 同步 P0/P1 优先级到 A1/A2/A3/B3 与 perf-gate 收口顺序。
+- [x] 新增近期里程碑（M1/M2/M3）与周更跟踪规则。
+
+### 问题背景
+
+- 原路线图更新时间停留在 2026-04-04，仍把 HTTPS、CI/CD、Docker 一键启动等已落地事项标为“未开始”。
+- 计划文档与代码现状不一致时，会直接影响迭代优先级和验收口径。
+
+### 根因分析
+
+1. 路线图长期未与 `docs/PRODUCT_LAUNCH_PLAYBOOK.md` 的阶段状态联动维护。
+2. 缺少“按风险优先”而非“按功能堆叠”的执行结构，导致紧急项不够突出。
+
+### 实现细节
+
+1. **路线图结构从“功能清单”改为“上线风险主线”**
+
+```text
+P0: 主线收口 + A1/A2/A3
+P1: B3 性能门禁稳态 + 文档治理
+P2: 运营与体验增强
+P3: 合规与商业化
+```
+
+2. **新增里程碑与执行规则**
+
+```text
+M1 (05-03): perf-gate 收口 + A1 + A2
+M2 (05-10): A3 演练 + B3 稳态
+M3 (05-24): 合规最小集 + 运营需求切片
+规则：一个风险主题一个分支一个 PR；每周更新路线图状态
+```
+
+### 验证与证据
+
+- `docs/ROADMAP.md` 已完成整体更新，并与 `docs/PRODUCT_LAUNCH_PLAYBOOK.md` 第 8 节执行计划对齐。
+- `git status -sb` 显示本次仅文档改动，符合当前“先治理后功能”的执行目标。
+
+### 踩坑与经验
+
+- 路线图如果不定期更新，会把“已完成能力”误导成“待建设能力”，造成重复投入。
+- 上线阶段更适合使用“风险闭环式路线图”，而不是通用功能 backlog。
+
+### 后续优化
+
+- [ ] 将 A1/A2/A3/B3 的 PR 模板化（改动清单、验收命令、证据附件）并纳入发布流程。
+- [ ] 在路线图中增加“最近一次主线状态核对命令”小节，降低人工遗漏。
+
+---
+
 ## 📅 2026-04-27 (第 53 天) - 上线手册状态冲突修复与两周执行计划落地 ✅
 
 ### 完成的工作

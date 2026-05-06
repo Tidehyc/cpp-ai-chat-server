@@ -12,6 +12,8 @@
 - 调整项：`PERF_WARN_RATIO` / `PERF_WARN_FAIL` / 其他
 - 变更前：
 - 变更后：
+- 当前门禁模式：strict / warn-only
+- 门禁来源：env / cli / workflow
 
 ## 变更原因
 
@@ -30,6 +32,14 @@
 - 趋势摘要文件：`docs/perf_reports/message_history_benchmark_summary.md`
 - 相关 benchmark 原始报告：
   - `docs/perf_reports/message_history_benchmark_*.txt`
+- backend-checks job summary：
+
+```text
+PERF_WARN_RATIO=
+PERF_WARN_FAIL=
+gate_mode=
+gate_source=
+```
 
 ## 验证结果
 

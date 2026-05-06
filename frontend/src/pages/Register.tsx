@@ -30,6 +30,11 @@ export default function Register() {
     }
   }, [isLoggedIn, storedUsername, navigate])
 
+  // 现在改为重定向到 /login?register=1，让登录页展示滑动注册面板
+  useEffect(() => {
+    navigate('/login?register=1', { replace: true })
+  }, [navigate])
+
   // 连接 WebSocket
   useEffect(() => {
     const connectWS = async () => {
@@ -166,140 +171,16 @@ export default function Register() {
   }
 
   return (
-    <div className="auth-shell min-h-screen flex items-center justify-center p-4">
-      <div className="auth-wrap w-full max-w-5xl grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-0 overflow-hidden rounded-3xl border border-white/40 bg-white/40 shadow-2xl">
-        <section className="auth-hero hidden lg:flex flex-col justify-between p-10">
-          <div>
-            <div className="auth-brand mb-6 inline-flex items-center gap-3 rounded-2xl border border-white/60 bg-white/60 px-4 py-2 text-sm font-semibold text-slate-700">
-              <span className="text-lg">✦</span>
-              Flow Chat Engine
+    // Register now redirects to login slider — no standalone page content
+    <div className="theme-page flex items-center justify-center p-4">
+      <div className="auth-wrap theme-card w-full max-w-5xl grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-0 overflow-hidden rounded-3xl">
+        <section className="auth-card theme-card p-6 md:p-10 text-center">
+          <div className="text-center">
+            <h2 className="text-lg font-medium">正在跳转到注册面板…</h2>
+            <p className="theme-muted text-sm">如果没有自动跳转，请点击下面按钮。</p>
+            <div className="mt-4">
+              <button onClick={() => navigate('/login?register=1')} className="btn">前往注册</button>
             </div>
-            <h1 className="auth-hero-title mb-4 text-4xl font-bold leading-tight text-slate-900">
-              创建你的工作空间
-              <br />
-              从实时对话开始
-            </h1>
-            <p className="text-slate-600 text-base leading-7">
-              注册后即可使用好友系统、房间聊天与 AI 助手。
-              所有会话都会通过后端规则化流程保障质量。
-            </p>
-          </div>
-
-          <div className="auth-hero-tags flex flex-wrap gap-2 text-xs text-slate-600">
-            <span className="auth-tag">实时消息</span>
-            <span className="auth-tag">好友私聊</span>
-            <span className="auth-tag">AI 协作</span>
-            <span className="auth-tag">安全门禁</span>
-          </div>
-        </section>
-
-        <section className="auth-card p-6 md:p-10">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-600 to-blue-700 shadow-lg shadow-cyan-500/30 mb-4">
-              <span className="text-3xl">🚀</span>
-            </div>
-            <h2 className="text-3xl font-bold text-slate-900 mb-2">创建账号</h2>
-            <p className="text-slate-600">注册后将自动登录进入聊天</p>
-          </div>
-
-          <div className="flex items-center justify-center mb-6">
-            <div className={`w-2 h-2 rounded-full ${getStatusColor()} mr-2 animate-pulse`}></div>
-            <span className="text-sm text-slate-500">{connectionStatus === 'connected' ? '已连接' : connectionStatus === 'connecting' ? '连接中...' : '未连接'}</span>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="username" className="auth-label block text-sm font-medium mb-1">
-                用户名
-              </label>
-              <input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                disabled={loading}
-                className="auth-input w-full px-4 py-2.5 rounded-xl"
-                placeholder="请输入用户名"
-                autoComplete="username"
-                autoFocus
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="auth-label block text-sm font-medium mb-1">
-                密码
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-                className="auth-input w-full px-4 py-2.5 rounded-xl"
-                placeholder="请输入密码（至少 6 位）"
-                autoComplete="new-password"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="confirmPassword" className="auth-label block text-sm font-medium mb-1">
-                确认密码
-              </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                disabled={loading}
-                className="auth-input w-full px-4 py-2.5 rounded-xl"
-                placeholder="请再次输入密码"
-                autoComplete="new-password"
-              />
-            </div>
-
-            {error && (
-              <div className="auth-error px-4 py-3 rounded-xl text-sm">
-                {error}
-              </div>
-            )}
-
-            {success && (
-              <div className="auth-success px-4 py-3 rounded-xl text-sm">
-                {success}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading || connectionStatus !== 'connected'}
-              className="auth-submit w-full rounded-xl py-2.5 px-4 font-medium text-white flex items-center justify-center"
-            >
-              {loading ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  注册中...
-                </>
-              ) : (
-                '注册'
-              )}
-            </button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => navigate('/login')}
-              className="text-sm font-medium text-cyan-700 hover:text-cyan-800"
-            >
-              ← 返回登录页面
-            </button>
-          </div>
-
-          <div className="mt-8 border-t border-slate-200/70 pt-4 text-center text-xs text-slate-500">
-            <p>支持好友私聊 · 群聊 · AI 对话</p>
-            <p className="mt-1">Powered by C++17 + Boost.Asio + React</p>
           </div>
         </section>
       </div>

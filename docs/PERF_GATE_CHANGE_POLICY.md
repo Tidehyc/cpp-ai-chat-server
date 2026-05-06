@@ -65,3 +65,5 @@
 - [ ] README 与报告模板已同步
 - [ ] PR 中包含趋势数据与风险说明
 - [ ] 合并后至少一次 CI 行为验证
+- [ ] backend-checks job summary 已输出 PERF_WARN_RATIO / PERF_WARN_FAIL / gate_mode / gate_source
+- [ ] gate_source 值域已统一为 env / cli / workflow，并与 CI 输出一致

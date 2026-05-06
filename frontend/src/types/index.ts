@@ -25,6 +25,7 @@ export interface Message {
   is_history?: boolean
   is_own?: boolean
   is_error?: boolean
+  is_delivered?: boolean // 消息是否送达服务器
   is_read?: boolean  // 消息是否已读
 }
 
@@ -98,4 +99,4 @@ export interface AIPreset {
 }
 
 // 主题类型
-export type ThemeType = 'light' | 'dark' | 'system'
+export type ThemeType = 'light'

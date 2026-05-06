@@ -1,14 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserStore } from '../stores/userStore'
-import { useThemeStore } from '../stores/themeStore'
 import { wsService } from '../services/websocket'
-import { Circle, LogOut, Monitor, Moon, Palette, Settings as SettingsIcon, Sun, User } from 'lucide-react'
+import { Circle, Home, LogOut, Palette, Settings as SettingsIcon, Sun, User } from 'lucide-react'
+import MobileTabBar from '../components/MobileTabBar'
 
 export default function Settings() {
   const navigate = useNavigate()
   const { username, status, setStatus, showLogoutConfirm, setShowLogoutConfirm, logout } = useUserStore()
-  const { theme, setTheme } = useThemeStore()
 
   const [localStatus, setLocalStatus] = useState(status)
 
@@ -17,14 +16,7 @@ export default function Settings() {
     { value: 'online', label: '在线', icon: <Circle className="mx-auto text-emerald-500" size={18} fill="currentColor" /> },
     { value: 'busy', label: '忙碌', icon: <Circle className="mx-auto text-rose-500" size={18} fill="currentColor" /> },
     { value: 'away', label: '离开', icon: <Circle className="mx-auto text-amber-500" size={18} fill="currentColor" /> },
-    { value: 'offline', label: '离线', icon: <Circle className="mx-auto text-slate-400" size={18} fill="currentColor" /> },
-  ]
-
-  // 主题选项
-  const themeOptions = [
-    { value: 'light', label: '浅色', icon: <Sun className="mx-auto text-amber-500" size={20} /> },
-    { value: 'dark', label: '深色', icon: <Moon className="mx-auto text-indigo-500" size={20} /> },
-    { value: 'system', label: '系统', icon: <Monitor className="mx-auto text-sky-600" size={20} /> },
+    { value: 'offline', label: '离线', icon: <Circle className="mx-auto theme-muted" size={18} fill="currentColor" /> },
   ]
 
   // 更新状态
@@ -32,11 +24,6 @@ export default function Settings() {
     setLocalStatus(newStatus)
     setStatus(newStatus)
     wsService.setStatus(newStatus)
-  }
-
-  // 更新主题
-  const handleUpdateTheme = (newTheme: typeof theme) => {
-    setTheme(newTheme)
   }
 
   // 登出
@@ -50,14 +37,14 @@ export default function Settings() {
   return (
     <div className="auth-shell page-enter min-h-screen">
       {/* 顶部栏 */}
-      <div className="chat-topnav border-b border-slate-200/60">
+      <div className="chat-topnav border-b theme-divider">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="chat-title text-2xl font-bold icon-label"><SettingsIcon size={20} />设置中心</h1>
           <button
             onClick={() => navigate('/')}
             className="action-chip"
           >
-            ← 返回聊天
+            <span className="icon-label"><Home size={14} />返回主界面</span>
           </button>
         </div>
       </div>
@@ -66,14 +53,14 @@ export default function Settings() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* 用户信息卡片 */}
         <div className="panel-card p-6 mb-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4 icon-label"><User size={17} />用户信息</h2>
+          <h2 className="text-lg font-semibold text-inherit mb-4 icon-label"><User size={17} />用户信息</h2>
           <div className="flex items-center space-x-4">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-600 to-blue-700 flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-cyan-500/25">
               {username?.charAt(0).toUpperCase()}
             </div>
             <div>
-              <p className="text-xl font-medium text-slate-900">{username}</p>
-              <p className="text-sm text-slate-500">
+              <p className="text-xl font-medium text-inherit">{username}</p>
+              <p className="text-sm theme-muted">
                 当前状态：{statusOptions.find(s => s.value === status)?.label}
               </p>
             </div>
@@ -82,7 +69,7 @@ export default function Settings() {
 
         {/* 状态设置 */}
         <div className="panel-card p-6 mb-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4 icon-label"><Circle size={14} fill="currentColor" className="text-emerald-500" />在线状态</h2>
+          <h2 className="text-lg font-semibold text-inherit mb-4 icon-label"><Circle size={14} fill="currentColor" className="text-emerald-500" />在线状态</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {statusOptions.map((option) => (
               <button
@@ -91,12 +78,12 @@ export default function Settings() {
                 className={`p-4 rounded-xl border transition-all ${
                   localStatus === option.value
                     ? 'border-cyan-500 bg-cyan-50/75 shadow-sm shadow-cyan-200/60'
-                    : 'border-slate-200 hover:border-cyan-200 bg-white/78'
+                    : 'border-theme-divider hover:border-cyan-200 bg-white/78'
                 }`}
               >
                 <div className="text-center">
                   <span className="text-3xl icon-only">{option.icon}</span>
-                  <p className="text-sm font-medium mt-2 text-slate-900">{option.label}</p>
+                  <p className="text-sm font-medium mt-2 text-inherit">{option.label}</p>
                 </div>
               </button>
             ))}
@@ -105,30 +92,22 @@ export default function Settings() {
 
         {/* 主题设置 */}
         <div className="panel-card p-6 mb-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4 icon-label"><Palette size={17} />主题设置</h2>
-          <div className="grid grid-cols-3 gap-3">
-            {themeOptions.map((option) => (
-              <button
-                key={option.value}
-                onClick={() => handleUpdateTheme(option.value as typeof theme)}
-                className={`p-4 rounded-xl border transition-all ${
-                  theme === option.value
-                    ? 'border-cyan-500 bg-cyan-50/75 shadow-sm shadow-cyan-200/60'
-                    : 'border-slate-200 hover:border-cyan-200 bg-white/78'
-                }`}
-              >
-                <div className="text-center">
-                  <span className="text-3xl icon-only">{option.icon}</span>
-                  <p className="text-sm font-medium mt-2 text-slate-900">{option.label}</p>
-                </div>
-              </button>
-            ))}
+          <h2 className="text-lg font-semibold text-inherit mb-4 icon-label"><Palette size={17} />主题设置</h2>
+          <div className="theme-surface rounded-xl p-4 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-inherit">当前主题</p>
+              <p className="text-xs theme-muted mt-1">仅提供浅色主题，界面风格保持统一</p>
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 theme-nav-item is-active">
+              <Sun size={16} />
+              <span className="text-sm font-medium">浅色</span>
+            </div>
           </div>
         </div>
 
         {/* 账户操作 */}
         <div className="panel-card p-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4 icon-label"><LogOut size={17} />账户操作</h2>
+          <h2 className="text-lg font-semibold text-inherit mb-4 icon-label"><LogOut size={17} />账户操作</h2>
           <div className="space-y-3">
             <button
               onClick={() => setShowLogoutConfirm(true)}
@@ -140,18 +119,20 @@ export default function Settings() {
         </div>
 
         {/* 版本信息 */}
-        <div className="mt-8 text-center text-sm text-slate-500">
+        <div className="mt-8 text-center text-sm theme-muted">
           <p>AI Chat Server v1.0</p>
           <p className="mt-1">Powered by C++17 + Boost.Asio + React 18</p>
         </div>
       </div>
+
+      <MobileTabBar />
 
       {/* 登出确认对话框 */}
       {showLogoutConfirm && (
         <div className="modal-overlay">
           <div className="modal-card max-w-sm">
             <h3 className="modal-title mb-2">确认退出</h3>
-            <p className="text-slate-600 mb-6">确定要退出登录吗？</p>
+            <p className="theme-muted mb-6">确定要退出登录吗？</p>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setShowLogoutConfirm(false)}
