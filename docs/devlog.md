@@ -438,6 +438,12 @@ docs/release_records/release-prep-20260427.md
 - **同步更新**: `docs/compliance/README.md` 与 `docs/INDEX.md` 已纳入新文档入口；`docs/ROADMAP.md` 中 P3 剩余两项已勾选。
 - **结论**: 路线图中的 P3 文档型事项已收口，剩余工作将转向落地系统/流程而非补文档。
 
+## 📅 2026-05-07 - perf-gate 主线收口同步
+
+- **确认结果**: PR #4 已合并，包含 `fix(ci): classify perf gate warnings correctly` 与 `fix(perf): stabilize benchmark gate and csv output` 两个提交。
+- **同步更新**: `docs/ROADMAP.md` 中 P0 主线收口状态已标记为完成。
+- **结论**: 路线图中的主线收口项已与 GitHub 合并状态一致，当前仍需关注的是测试清单和上线手册中的少量基础项是否还存在真实缺口。
+
 
 
 ### 完成的工作

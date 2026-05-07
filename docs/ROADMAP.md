@@ -39,7 +39,7 @@
 
 | 优先级 | 目标 | 当前状态 |
 |--------|------|----------|
-| P0 | 收口主线与上线风险闭环 | 进行中 |
+| P0 | 收口主线与上线风险闭环 | 已完成 |
 | P1 | 稳态化性能门禁与发布治理 | 进行中 |
 | P2 | 用户体验与运营能力增强 | 已完成 |
 | P3 | 商用规模化与商业化能力 | 未开始 |
@@ -50,11 +50,11 @@
 
 ### 1) 主线收口：perf-gate 修复合并
 
-状态：进行中
+状态：已完成
 建议分支：copilot/perf-gate-fix-20260427（现有）
 
-- [ ] 合并 `fix(ci): classify perf gate warnings correctly`
-- [ ] 合并 `fix(perf): stabilize benchmark gate and csv output`
+- [x] 合并 `fix(ci): classify perf gate warnings correctly`
+- [x] 合并 `fix(perf): stabilize benchmark gate and csv output`
 - [x] 同步发布说明与核对记录
 
 验收：`main..HEAD` 为空，required checks 全绿。
