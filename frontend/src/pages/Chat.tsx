@@ -40,6 +40,10 @@ export default function Chat() {
   const [newFriendUsername, setNewFriendUsername] = useState('')
   const [friendRequestStatus, setFriendRequestStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle')
   const [friendRequestMessage, setFriendRequestMessage] = useState('')
+  const [notificationBanner, setNotificationBanner] = useState<{
+    type: 'success' | 'error' | 'info' | 'warning'
+    text: string
+  } | null>(null)
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
   
   // 模态框状态
@@ -53,6 +57,7 @@ export default function Chat() {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const selectedFriendRef = useRef<string | null>(null)
   const lastSentTargetRef = useRef<string | null>(null) // 记录最后发送的目标好友
+  const notificationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const {
     containerRef: messageContainerRef,
     endRef: messagesEndRef,
@@ -66,6 +71,27 @@ export default function Chat() {
   useEffect(() => {
     selectedFriendRef.current = selectedFriend
   }, [selectedFriend])
+
+  const pushNotification = useCallback((type: 'success' | 'error' | 'info' | 'warning', text: string) => {
+    setNotificationBanner({ type, text })
+
+    if (notificationTimerRef.current) {
+      clearTimeout(notificationTimerRef.current)
+    }
+
+    notificationTimerRef.current = setTimeout(() => {
+      setNotificationBanner(null)
+      notificationTimerRef.current = null
+    }, 4000)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (notificationTimerRef.current) {
+        clearTimeout(notificationTimerRef.current)
+      }
+    }
+  }, [])
 
   // 好友上下线通知 ref
   const handleFriendOnlineRef = useRef<(msg: any) => void>(() => {})
@@ -163,8 +189,9 @@ export default function Chat() {
     
     if (reader) {
       useMessageStore.getState().markMessagesRead(reader)
+      pushNotification('info', `${reader} 已读你的消息`)
     }
-  }, [])
+  }, [pushNotification])
 
   // 处理系统消息
   const handleSystemMessage = useCallback((message: any) => {
@@ -174,6 +201,7 @@ export default function Chat() {
     if (content.includes('好友请求已发送')) {
       setFriendRequestStatus('success')
       setFriendRequestMessage('好友请求已发送，等待对方同意！')
+      pushNotification('success', '好友请求已发送')
 
       // 1.5 秒后关闭弹窗
       setTimeout(() => {
@@ -189,6 +217,7 @@ export default function Chat() {
     if (content.includes('已经是好友')) {
       setFriendRequestStatus('error')
       setFriendRequestMessage('你们已经是好友了，无需重复添加')
+      pushNotification('warning', '你们已经是好友了')
       return
     }
 
@@ -196,6 +225,7 @@ export default function Chat() {
     if (content.includes('失败') || content.includes('已发送过')) {
       setFriendRequestStatus('error')
       setFriendRequestMessage(content.includes('已发送过') ? '你已经发送过好友请求了' : '发送失败，请稍后重试')
+      pushNotification('error', content.includes('已发送过') ? '你已经发送过好友请求了' : '发送失败，请稍后重试')
       return
     }
 
@@ -213,6 +243,7 @@ export default function Chat() {
           status: 'pending',
           createdAt: new Date().toISOString(),
         })
+        pushNotification('warning', `${senderUsername} 向你发送了好友请求`)
       }
       return
     }
@@ -222,6 +253,7 @@ export default function Chat() {
       const match = content.match(/(\S+) 接受了/)
       if (match) {
         // 添加好友到列表
+        pushNotification('success', `${match[1]} 已接受你的好友请求`)
       }
     }
 
@@ -644,6 +676,26 @@ export default function Chat() {
             </span>
           </div>
         </div>
+
+        {notificationBanner && (
+          <div className={`mx-3 mt-3 rounded-2xl border px-4 py-3 text-sm shadow-sm md:mx-6 ${
+            notificationBanner.type === 'success'
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+              : notificationBanner.type === 'error'
+                ? 'border-rose-200 bg-rose-50 text-rose-700'
+                : notificationBanner.type === 'warning'
+                  ? 'border-amber-200 bg-amber-50 text-amber-800'
+                  : 'border-cyan-200 bg-cyan-50 text-cyan-800'
+          }`}>
+            <span className="icon-label">
+              {notificationBanner.type === 'success' ? <CheckCircle2 size={15} /> : null}
+              {notificationBanner.type === 'error' ? <CircleX size={15} /> : null}
+              {notificationBanner.type === 'warning' ? <Mail size={15} /> : null}
+              {notificationBanner.type === 'info' ? <CircleAlert size={15} /> : null}
+              {notificationBanner.text}
+            </span>
+          </div>
+        )}
 
         {/* 聊天顶部栏 */}
         <div className="chat-roombar h-14 flex items-center justify-between px-6">

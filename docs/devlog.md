@@ -418,6 +418,26 @@ docs/release_records/release-prep-20260427.md
   - `npm audit --audit-level=high` 返回 `found 0 vulnerabilities`。
 - **结论**: 这轮 major 升级已把剩余的高风险 dev 依赖问题收口，可作为最终收尾提交继续推进。
 
+## 📅 2026-05-07 - 前端通知体验补齐
+
+- **变更**: 在 `frontend/src/pages/Chat.tsx` 增加轻量级通知 banner，覆盖好友请求发送结果、好友请求到达与已读回执的可见反馈。
+- **验证**: 前端构建成功，界面通知逻辑可通过现有消息流触发。
+- **结论**: 前端体验增强项已补齐到可用状态，路线图中的 P2 可视为完成。
+
+## 📅 2026-05-07 - 合规文档最小集补齐
+
+- **新增文档**: `docs/compliance/README.md`、`docs/compliance/privacy-policy.md`、`docs/compliance/user-agreement.md`、`docs/compliance/data-deletion-export.md`。
+- **内容范围**: 覆盖 Beta 阶段最小合规入口、隐私政策草案、用户协议草案以及数据导出/删除流程说明。
+- **同步更新**: `docs/INDEX.md` 已新增合规文档入口；`docs/ROADMAP.md` 已将“隐私政策、用户协议、数据删除/导出流程”勾选完成。
+- **结论**: 合规文档最小集已补齐，P3 进入剩余“审计留痕/值班闭环”和“配额/账单/成本监控”阶段。
+
+## 📅 2026-05-07 - P3 合规收尾
+
+- **新增文档**: `docs/compliance/audit-duty-closure.md`、`docs/compliance/usage-billing-cost.md`。
+- **内容范围**: 补齐审计留痕与值班闭环草案、配额/账单/成本监控草案，形成 P3 的最小文档闭环。
+- **同步更新**: `docs/compliance/README.md` 与 `docs/INDEX.md` 已纳入新文档入口；`docs/ROADMAP.md` 中 P3 剩余两项已勾选。
+- **结论**: 路线图中的 P3 文档型事项已收口，剩余工作将转向落地系统/流程而非补文档。
+
 
 
 ### 完成的工作
