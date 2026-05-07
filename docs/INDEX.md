@@ -48,6 +48,7 @@
 - [TEST_CHECKLIST.md](TEST_CHECKLIST.md) - 功能与专项测试主清单
 - [archive/2026-04/DOCKER_FINAL_TEST_REPORT.md](archive/2026-04/DOCKER_FINAL_TEST_REPORT.md) - Docker 历史测试报告（归档）
 - [frontend/TEST_CHECKLIST.md](../frontend/TEST_CHECKLIST.md) - 前端测试清单
+- [test_reports/test_summary_2026-05-07.md](test_reports/test_summary_2026-05-07.md) - 2026-05-07 验证汇总
 
 ## 7. 学习与历史资料
 

@@ -11,8 +11,8 @@ _测试日期：2026-04-03_
 - [ ] 本地编译成功（`cmake .. && make -j$(nproc)`）
 - [ ] 单元测试通过（`./chat_server_test`）
 - [ ] 服务器启动成功（`./chat_server`）
-- [ ] Docker 构建成功（`docker-compose build`）
-- [ ] Docker 容器运行正常（`docker-compose up -d`）
+- [x] Docker 构建成功（`docker-compose build`）
+- [x] Docker 容器运行正常（`docker-compose up -d`）
 - [ ] Web 前端启动成功（`cd frontend && npm run dev`）
 
 ---
@@ -209,12 +209,12 @@ _测试日期：2026-04-03_
 
 ### 4.1 构建与运行
 - [ ] **镜像构建**
-  - `docker-compose build` 成功
-  - 镜像大小合理（< 100MB）
+  - [x] `docker-compose build` 成功
+  - [ ] 镜像大小合理（< 100MB），本轮实测 `102MB`
 - [ ] **容器运行**
-  - `docker-compose up -d` 成功
-  - 容器健康检查通过
-  - 端口映射正确（8080）
+  - [x] `docker-compose up -d` 成功
+  - [x] 容器健康检查通过（`docker-compose ps` 显示 `Up (healthy)`）
+  - [x] 端口映射正确（`127.0.0.1:8080->8080/tcp`）
 - [ ] **环境变量**
   - `.env` 文件配置
   - AI_API_KEY 生效
@@ -339,6 +339,24 @@ _测试日期：2026-04-03_
 ```bash
 sqlite3 data/chat.db "SELECT id,from_user,to_user,is_read,timestamp FROM messages ORDER BY timestamp DESC LIMIT 20;"
 ```
+
+---
+
+## 九、已确认验证记录
+
+说明：本节仅收录已由实际命令直接证实的结果，不替代整份清单的逐项人工验收。
+
+- [x] 前端构建成功：`cd frontend && npm run build`
+- [x] 前端依赖审计无高危漏洞：`cd frontend && npm audit --audit-level=high`
+- [x] 后端测试通过：`cd build && ctest --output-on-failure`，48/48 tests passed
+- [x] 文档一致性检查通过：`git diff --check`
+- [x] Docker 镜像构建通过：`docker-compose build`
+- [x] Docker 容器健康检查通过：`docker-compose up -d` 后 `docker-compose ps` 显示 `Up (healthy)`
+- [x] Docker 端口映射验证通过：`docker-compose ps` 显示 `127.0.0.1:8080->8080/tcp`
+- [ ] Docker 镜像体积目标（<100MB）暂未达标：`docker image ls cpp-ai-chat-server_chat-server:latest` 实测 `102MB`
+- [x] 已归档到验证汇总：[`docs/test_reports/test_summary_2026-05-07.md`](test_reports/test_summary_2026-05-07.md)
+
+未回填项说明：Docker 启动、浏览器交互、移动端适配、日志轮转等内容仍需单独补跑后再勾选。
 
 ---
 
