@@ -34,18 +34,27 @@
 - [BRANCH_PROTECTION_REQUIRED_CHECKS.md](BRANCH_PROTECTION_REQUIRED_CHECKS.md) - 必过检查说明
 - [BRANCH_PROTECTION_RELEASE_TEMPLATE.md](BRANCH_PROTECTION_RELEASE_TEMPLATE.md) - release 分支保护模板
 
-## 5. 测试文档
+## 5. 合规文档
+
+- [compliance/README.md](compliance/README.md) - 合规文档入口
+- [compliance/privacy-policy.md](compliance/privacy-policy.md) - 隐私政策草案
+- [compliance/user-agreement.md](compliance/user-agreement.md) - 用户协议草案
+- [compliance/data-deletion-export.md](compliance/data-deletion-export.md) - 数据导出与删除流程草案
+- [compliance/audit-duty-closure.md](compliance/audit-duty-closure.md) - 审计留痕与值班闭环草案
+- [compliance/usage-billing-cost.md](compliance/usage-billing-cost.md) - 配额、账单与成本监控草案
+
+## 6. 测试文档
 
 - [TEST_CHECKLIST.md](TEST_CHECKLIST.md) - 功能与专项测试主清单
 - [archive/2026-04/DOCKER_FINAL_TEST_REPORT.md](archive/2026-04/DOCKER_FINAL_TEST_REPORT.md) - Docker 历史测试报告（归档）
 - [frontend/TEST_CHECKLIST.md](../frontend/TEST_CHECKLIST.md) - 前端测试清单
 
-## 6. 学习与历史资料
+## 7. 学习与历史资料
 
 - [STUDY_NOTES_INDEX.md](STUDY_NOTES_INDEX.md) - 学习笔记总览入口
 - [archive/2026-04/LAUNCH_RECAP_2026-04-24.md](archive/2026-04/LAUNCH_RECAP_2026-04-24.md) - 阶段性复盘记录（归档）
 
-## 7. 归档目录
+## 8. 归档目录
 
 - [archive/2026-04/](archive/2026-04/) - 2026-04 历史文档归档
 - [archive/2026-04/THEME_FIX_SUMMARY.md](archive/2026-04/THEME_FIX_SUMMARY.md) - 主题修复历史总结（归档）
