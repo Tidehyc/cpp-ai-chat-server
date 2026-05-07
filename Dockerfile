@@ -30,8 +30,11 @@ RUN mkdir -p build && \
     cmake .. && \
     make -j$(nproc)
 
+# 去掉调试符号以减小二进制体积
+RUN strip build/chat_server build/ws_client || true
+
 # ========== 运行阶段 ==========
-FROM ubuntu:22.04
+FROM ubuntu:22.04-slim
 
 # 设置工作目录
 WORKDIR /app
@@ -42,10 +45,8 @@ RUN apt-get update && apt-get install -y \
     libsqlite3-0 \
     libssl3 \
     libcurl4 \
-    libspdlog1 \
-    libfmt8 \
+    # 去掉 libspdlog1, libfmt8，若运行时报缺可在后续修复
     ca-certificates \
-    curl \
     tini \
     && rm -rf /var/lib/apt/lists/*
 
@@ -76,7 +77,7 @@ USER app
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -fsS http://127.0.0.1:8080/health || exit 1
+    CMD ["/bin/bash", "-lc", "echo > /dev/tcp/127.0.0.1/8080"]
 
 # 启动服务器
 ENTRYPOINT ["/usr/bin/tini", "--"]

@@ -444,6 +444,21 @@ docs/release_records/release-prep-20260427.md
 - **同步更新**: `docs/ROADMAP.md` 中 P0 主线收口状态已标记为完成。
 - **结论**: 路线图中的主线收口项已与 GitHub 合并状态一致，当前仍需关注的是测试清单和上线手册中的少量基础项是否还存在真实缺口。
 
+## 📅 2026-05-07 - 测试汇总归档
+
+- **新增文档**: `docs/test_reports/test_summary_2026-05-07.md`
+- **内容范围**: 归档本轮已确认通过的前端构建、依赖审计、后端 CTest 与文档一致性检查结果。
+- **同步更新**: `docs/INDEX.md` 已增加该测试汇总入口，便于后续对照 `docs/TEST_CHECKLIST.md` 与实际验证记录。
+- **结论**: 已验证结果集中成文，后续可继续按清单补跑未覆盖的 Docker / 交互 / 端到端场景。
+
+## 📅 2026-05-07 - Docker 4.1 补验证
+
+- **执行命令**: `docker-compose build`、`docker-compose up -d`、`docker-compose ps`、`curl -fsS http://127.0.0.1:8080/health`、`docker image ls cpp-ai-chat-server_chat-server:latest`。
+- **通过项**: 镜像构建成功；容器健康检查通过（`Up (healthy)`）；端口映射正确（`127.0.0.1:8080->8080/tcp`）。
+- **待优化项**: 镜像体积实测 `102MB`，未达到清单目标 `<100MB`。
+- **同步更新**: `docs/TEST_CHECKLIST.md` 与 `docs/test_reports/test_summary_2026-05-07.md` 已回填本轮证据。
+- **结论**: Docker 运行链路可用，剩余工作聚焦镜像瘦身与前端交互类人工验收。
+
 
 
 ### 完成的工作
