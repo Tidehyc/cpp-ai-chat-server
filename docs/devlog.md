@@ -397,6 +397,28 @@ docs/release_records/release-prep-20260427.md
 ---
 
 ## 📅 2026-04-27 (第 53 天) - docs 第三轮收敛（归档分层 + 巡检接入）✅
+ 
+## 📅 2026-05-06 - PR #7 合并与验证完成
+
+- **PR 合并**: 已合并 PR #7（chore(frontend): upgrade runtime deps to fix audit），并删除分支 `feat/frontend-deps-upgrade-20260506`。
+- **变更摘要**: 升级 `frontend` 运行时依赖以修复关键运行时漏洞（见 PR #7 列表）。
+- **验证步骤与结果**:
+  - `git pull` 同步到最新 `main`（包含合并提交）。
+  - 在 `frontend` 运行 `npm ci` 成功安装依赖。
+  - 在 `frontend` 运行 `npm run build`：Vite 构建成功，生成 `dist/`（部分 chunk 较大但非阻塞）。
+  - 在 `build` 目录运行 `ctest --output-on-failure`：后端测试全部通过（48/48 tests passed）。
+- **后续建议**: 将 dev 工具链（例如 `@typescript-eslint/*`、`vite`）的 major 升级列为后续分支与 PR，逐步验证兼容性并在 CI 上展开回归测试。
+
+## 📅 2026-05-07 - 前端 dev 工具链升级与复核
+
+- **变更**: 将 `frontend` 的 dev 工具链升级到当前兼容版本：`@typescript-eslint/eslint-plugin` / `@typescript-eslint/parser` -> `^8.59.2`，`@vitejs/plugin-react` -> `^6.0.1`，`vite` -> `^8.0.10`。
+- **安装**: 清理旧 `node_modules` 后重新执行 `npm install --no-audit --no-fund`，安装成功并生成新的依赖树。
+- **验证**:
+  - `npm run build` 成功，`vite v8.0.10` 正常产出 `dist/`。
+  - `npm audit --audit-level=high` 返回 `found 0 vulnerabilities`。
+- **结论**: 这轮 major 升级已把剩余的高风险 dev 依赖问题收口，可作为最终收尾提交继续推进。
+
+
 
 ### 完成的工作
 
