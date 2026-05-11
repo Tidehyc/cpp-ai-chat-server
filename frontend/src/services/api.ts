@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosError } from 'axios'
 
-const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8080'
+const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || ''
 
 // 创建 axios 实例
 export const api: AxiosInstance = axios.create({

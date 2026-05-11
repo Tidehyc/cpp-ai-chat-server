@@ -50,7 +50,7 @@ export default function Settings() {
       </div>
 
       {/* 设置内容 */}
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto px-4 py-8 pb-28 md:pb-8">
         {/* 用户信息卡片 */}
         <div className="panel-card p-6 mb-6">
           <h2 className="text-lg font-semibold text-inherit mb-4 icon-label"><User size={17} />用户信息</h2>

@@ -2,6 +2,62 @@
 
 ---
 
+## 📅 2026-05-11 - 项目收尾与交付状态确认
+
+- **收尾结果**: 项目核心服务链路已完成收口，前端页面可在局域网访问，后端容器健康，WebSocket 握手可用。
+- **范围边界**: 移动端专项验收已按用户要求停止，不再作为当前交付项推进。
+- **最终汇总**: 新增 [`docs/test_reports/test_summary_2026-05-11.md`](test_reports/test_summary_2026-05-11.md) 作为本轮最终收尾汇总。
+- **状态说明**: 这次收尾主要是把已验证状态、停止项和可追踪入口统一落文，便于后续维护或新增需求接手。
+
+## 📅 2026-05-09 - 浏览器交互补跑与 AI 页面回归修复
+
+- **验证通过**: 登录页注册/登录成功；登录后私聊、群聊、AI 路由切换正常；AI 页面消息可发送并收到回复。
+- **补充基线**: `settings` 路由在当前浏览器中可正常打开，作为后续移动端设备模拟的对照页。
+- **会话恢复**: 页面短暂回到登录页后，使用 `auto_ui_0509` 重新登录可正常回到主界面，登录链路可恢复。
+- **人工验收复核**: 从主界面继续切换到群聊与 AI，设置页仍可正常打开。
+- **发现问题**: AI 页面发送消息后出现 `Maximum update depth exceeded`（渲染循环）。
+- **修复**: 在 `frontend/src/pages/AIAssistant.tsx` 中稳定空消息引用，并将滚动副作用依赖收敛为 `aiMessages.length`。
+- **结果**: 回归后同页面重复发送消息正常，未再出现同类循环更新报错。
+- **移动端补充**: 在集成浏览器会话中尝试 `setViewportSize(390x844)`，但 `window.innerWidth` 仍为 `1114`，无法可靠模拟移动断点，已转为人工设备模拟复核。
+- **设置页兜底**: 为 `frontend/src/pages/Settings.tsx` 的内容区增加底部留白，减少窄屏下被底部导航遮挡的风险。
+- **DOM 复核**: 设置页内容容器 class 含 `pb-28`，`MobileTabBar` 已挂载但桌面态显示为 `none`。
+
+## 📅 2026-05-09 - Docker 日志轮转实测通过
+
+- **验证方式**: 使用临时容器 `log-rotate-probe` 搭配 `--log-driver json-file --log-opt max-size=100k --log-opt max-file=2`，输出大量日志。
+- **结果**: 在宿主挂载目录中观察到 `*-json.log` 与 `*-json.log.1`，证明 Docker `json-file` 轮转在当前环境生效。
+- **说明**: 这次验证针对 Docker 日志驱动行为本身，作为应用容器轮转配置的实效性证据。
+
+## 📅 2026-05-09 - Docker 日志轮转配置检查
+
+- **检查结果**: 运行容器 `cpp-ai-chat-server` 的日志驱动为 `json-file`，参数为 `max-size=10m`、`max-file=3`。
+- **结论**: 日志轮转策略已配置到运行时，但实际滚动行为仍需在高日志量场景下进一步验证。
+- **限制**: 当前会话账号无权限读取 `/var/lib/docker/containers/...`，未能直接确认 `*-json.log.1/.2/.3` 文件生成。
+- **后续复核命令**: `LOG_PATH=$(docker inspect cpp-ai-chat-server --format '{{.LogPath}}'); sudo ls -lh "$(dirname "$LOG_PATH")" | grep json.log`
+
+## 📅 2026-05-09 - 后续验证项拆分
+
+- **动作**: 将当前仍需人工补跑的浏览器交互、移动端适配和日志轮转验证拆分到独立后续清单。
+- **入口**: [`docs/test_reports/test_followup_2026-05-09.md`](test_reports/test_followup_2026-05-09.md)
+- **目的**: 保持已验证结论和待办项分离，减少测试清单噪音。
+
+## 📅 2026-05-09 - 移动端验收模板
+
+- **产物**: 新增 [`docs/test_reports/mobile_manual_acceptance_template_2026-05-09.md`](test_reports/mobile_manual_acceptance_template_2026-05-09.md)
+- **用途**: 提供手机/设备模拟下的最小验收清单，便于后续直接回填结果并收口移动端适配项。
+
+## 📅 2026-05-09 - 移动端人工验收记录
+
+- **产物**: 新增 [`docs/test_reports/mobile_manual_acceptance_2026-05-09.md`](test_reports/mobile_manual_acceptance_2026-05-09.md)
+- **状态**: 记录当前已通过浏览器工具/DOM 证据确认的项，以及仍需真实设备或设备模拟复核的项。
+
+## 📅 2026-05-09 - Docker 镜像体积优化达标
+
+- **优化结果**: 通过运行时基镜像与层级清理优化，将 `cpp-ai-chat-server_chat-server:latest` 缩减至 `95.1MB`，低于 `<100MB` 目标。
+- **关键变更**: 运行时基镜像改为本地可用的 `ubuntu:22.04`，保留 `libspdlog1` / `libfmt8` 以修复启动依赖，去掉对 `curl` 的健康检查耦合，并避免无效递归 `chown`。
+- **验证**: 镜像重建成功，`docker-compose ps chat-server` 显示 `Up (healthy)`，日志显示服务正常启动。
+- **备注**: 本次优化只收敛镜像体积与运行时稳定性，不改变业务行为。
+
 ## 📅 2026-04-29 - 合并 PR #5 与集成/压力测试
 
 - **PR 合并**: 已合并 PR #5 “Fix moderation test harness and record validation”，并删除临时分支。

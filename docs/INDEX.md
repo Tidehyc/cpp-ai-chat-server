@@ -49,6 +49,8 @@
 - [archive/2026-04/DOCKER_FINAL_TEST_REPORT.md](archive/2026-04/DOCKER_FINAL_TEST_REPORT.md) - Docker 历史测试报告（归档）
 - [frontend/TEST_CHECKLIST.md](../frontend/TEST_CHECKLIST.md) - 前端测试清单
 - [test_reports/test_summary_2026-05-07.md](test_reports/test_summary_2026-05-07.md) - 2026-05-07 验证汇总
+- [test_reports/test_summary_2026-05-11.md](test_reports/test_summary_2026-05-11.md) - 2026-05-11 最终收尾汇总
+- [test_reports/test_followup_2026-05-09.md](test_reports/test_followup_2026-05-09.md) - 2026-05-09 后续验证清单
 
 ## 7. 学习与历史资料
 
