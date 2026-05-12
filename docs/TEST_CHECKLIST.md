@@ -3,6 +3,8 @@
 _版本：v1.1.0_
 _测试日期：2026-04-03_
 
+> 收尾说明：本清单保留历史验证与未逐项覆盖的功能记录。项目核心链路已完成收尾，移动端专项验收已停止。
+
 ---
 
 ## 测试环境准备
@@ -13,7 +15,7 @@ _测试日期：2026-04-03_
 - [ ] 服务器启动成功（`./chat_server`）
 - [x] Docker 构建成功（`docker-compose build`）
 - [x] Docker 容器运行正常（`docker-compose up -d`）
-- [ ] Web 前端启动成功（`cd frontend && npm run dev`）
+- [x] Web 前端启动成功（`cd frontend && npm run dev`）
 
 ---
 
@@ -199,6 +201,7 @@ _测试日期：2026-04-03_
 - [ ] **移动端**
   - 布局适配
   - 触摸操作
+  - 已按用户要求停止，不再作为当前验收项推进
 - [ ] **深色主题**
   - 浅色/深色/系统三种模式
   - 主题切换
@@ -210,7 +213,7 @@ _测试日期：2026-04-03_
 ### 4.1 构建与运行
 - [ ] **镜像构建**
   - [x] `docker-compose build` 成功
-  - [ ] 镜像大小合理（< 100MB），本轮实测 `102MB`
+  - [x] 镜像大小合理（< 100MB），本轮实测 `95.1MB`
 - [ ] **容器运行**
   - [x] `docker-compose up -d` 成功
   - [x] 容器健康检查通过（`docker-compose ps` 显示 `Up (healthy)`）
@@ -353,10 +356,14 @@ sqlite3 data/chat.db "SELECT id,from_user,to_user,is_read,timestamp FROM message
 - [x] Docker 镜像构建通过：`docker-compose build`
 - [x] Docker 容器健康检查通过：`docker-compose up -d` 后 `docker-compose ps` 显示 `Up (healthy)`
 - [x] Docker 端口映射验证通过：`docker-compose ps` 显示 `127.0.0.1:8080->8080/tcp`
-- [ ] Docker 镜像体积目标（<100MB）暂未达标：`docker image ls cpp-ai-chat-server_chat-server:latest` 实测 `102MB`
+- [x] Docker 镜像体积目标（<100MB）已达标：`docker image ls cpp-ai-chat-server_chat-server:latest` 实测 `95.1MB`
+- [x] 浏览器登录流验证通过：前端 `http://127.0.0.1:5173/login` 注册并登录测试账号成功
+- [x] 聊天主界面基础交互验证通过：私聊/群聊/AI 路由切换正常，AI 页面可发送并收到回复
+- [x] 设置页浏览器基线验证通过：`http://127.0.0.1:5173/settings` 可正常打开，内容区已补充底部留白
+- [x] Docker 日志轮转验证通过：临时探针容器触发 `json-file` 轮转并生成 `json.log.1`
 - [x] 已归档到验证汇总：[`docs/test_reports/test_summary_2026-05-07.md`](test_reports/test_summary_2026-05-07.md)
 
-未回填项说明：Docker 启动、浏览器交互、移动端适配、日志轮转等内容仍需单独补跑后再勾选。
+未回填项说明：移动端适配仍需单独补跑后再勾选。后续任务已拆分到 [`docs/test_reports/test_followup_2026-05-09.md`](test_reports/test_followup_2026-05-09.md)。
 
 ---
 

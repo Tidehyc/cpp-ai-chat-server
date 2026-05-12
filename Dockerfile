@@ -8,7 +8,7 @@ FROM ubuntu:22.04 AS builder
 WORKDIR /build
 
 # 安装构建依赖
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     git \
@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y \
     nlohmann-json3-dev \
     libspdlog-dev \
     libgtest-dev \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制源代码
@@ -34,32 +35,34 @@ RUN mkdir -p build && \
 RUN strip build/chat_server build/ws_client || true
 
 # ========== 运行阶段 ==========
-FROM ubuntu:22.04-slim
+FROM ubuntu:22.04
 
 # 设置工作目录
 WORKDIR /app
 
 # 安装运行时依赖
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libboost-system1.74.0 \
     libsqlite3-0 \
     libssl3 \
     libcurl4 \
-    # 去掉 libspdlog1, libfmt8，若运行时报缺可在后续修复
+    libspdlog1 \
+    libfmt8 \
     ca-certificates \
     tini \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # 创建非 root 运行用户
 RUN groupadd --gid 10001 app && \
-    useradd --uid 10001 --gid 10001 --create-home --shell /usr/sbin/nologin app
+    useradd --uid 10001 --gid 10001 --no-create-home --no-log-init --shell /usr/sbin/nologin app
 
 # 从构建阶段复制编译好的文件
 COPY --from=builder --chown=app:app /build/build/chat_server /app/
 COPY --from=builder --chown=app:app /build/build/ws_client /app/
 
 # 创建数据目录
-RUN mkdir -p /app/data && chown -R app:app /app
+RUN mkdir -p /app/data && chown app:app /app/data
 
 # 设置环境变量
 ENV AI_API_KEY=""

@@ -145,3 +145,52 @@ jobs:
         run: |
           echo "backend-checks failed: category=${{ steps.backend_checks.outputs.failure_category }}, exit_code=${{ steps.backend_checks.outputs.exit_code }}"
           exit 1
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run secret scan
+        id: secret_scan
+        run: |
+          set +e
+          output="$(bash scripts/scan_secrets.sh)"
+          exit_code=$?
+          echo "exit_code=${exit_code}" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$output" | tee secret-scan-report.txt
+
+          status="ok"
+          summary="No secret-like patterns found."
+          if [[ "$exit_code" -eq 1 ]]; then
+            status="warn"
+            summary="Potential secret-like matches found; manual review required."
+          elif [[ "$exit_code" -ne 0 ]]; then
+            status="failed"
+            summary="Secret scan execution failed."
+          fi
+
+          echo "status=${status}" >> "$GITHUB_OUTPUT"
+          echo "summary=${summary}" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Publish secret scan summary to job summary
+        if: always()
+        run: |
+          echo "## Secret Scan Status" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- exit_code: ${{ steps.secret_scan.outputs.exit_code }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- status: ${{ steps.secret_scan.outputs.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- summary: ${{ steps.secret_scan.outputs.summary }}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload secret scan report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: secret-scan-report
+          path: secret-scan-report.txt
+          if-no-files-found: warn

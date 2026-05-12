@@ -14,6 +14,8 @@ import ExportModal from '../components/ExportModal'
 import MarkdownMessage from '../components/MarkdownMessage'
 import MobileTabBar from '../components/MobileTabBar'
 
+const EMPTY_AI_MESSAGES: any[] = []
+
 // AI 预设
 const AI_PRESETS = [
   { name: 'teacher', label: '老师', description: '耐心解答问题' },
@@ -63,11 +65,11 @@ export default function AIAssistant() {
   const handleSystemMessageRef = useRef<(message: any) => void>(() => {})
 
   // AI 对话消息（使用 ai_chat 作为 key）- 使用 selector 确保状态更新时重新渲染
-  const aiMessages = useMessageStore(state => state.getMessages('ai_chat'))
+  const aiMessages = useMessageStore(state => state.messages.get('ai_chat') ?? EMPTY_AI_MESSAGES)
 
   useEffect(() => {
     handleContentChange()
-  }, [aiMessages, handleContentChange])
+  }, [aiMessages.length, handleContentChange])
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768)
