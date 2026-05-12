@@ -36,6 +36,46 @@ TEST(MessageProtocolTest, SerializeDeserializeRoundTrip)
     EXPECT_EQ(parsed.timestamp, 123456789);
 }
 
+TEST(MessageProtocolTest, SerializeUsesMessageTypeWhenTypeStringMissing)
+{
+    Message msg;
+    msg.type.clear();
+    msg.msg_type = MessageType::SYSTEM;
+    msg.content = "maintenance";
+
+    const std::string payload = serialize_message(msg);
+    const Message parsed = deserialize_message(payload);
+
+    EXPECT_EQ(parsed.type, "system");
+    EXPECT_EQ(parsed.msg_type, MessageType::SYSTEM);
+    EXPECT_EQ(parsed.content, "maintenance");
+    EXPECT_FALSE(parsed.is_read);
+    EXPECT_EQ(parsed.timestamp, 0);
+}
+
+TEST(MessageProtocolTest, DeserializeMissingFieldsFallsBackToDefaults)
+{
+    const Message parsed = deserialize_message(R"({"content":"hello"})");
+
+    EXPECT_EQ(parsed.type, "text");
+    EXPECT_EQ(parsed.msg_type, MessageType::TEXT);
+    EXPECT_EQ(parsed.from, "");
+    EXPECT_EQ(parsed.to, "");
+    EXPECT_EQ(parsed.room, "");
+    EXPECT_EQ(parsed.content, "hello");
+    EXPECT_FALSE(parsed.is_read);
+    EXPECT_EQ(parsed.timestamp, 0);
+}
+
+TEST(MessageProtocolTest, DeserializeUnknownTypeFallsBackToText)
+{
+    const Message parsed = deserialize_message(R"({"type":"custom_event","content":"ping"})");
+
+    EXPECT_EQ(parsed.type, "custom_event");
+    EXPECT_EQ(parsed.msg_type, MessageType::TEXT);
+    EXPECT_EQ(parsed.content, "ping");
+}
+
 TEST(MessageProtocolTest, InvalidJsonShouldNotCrash)
 {
     const Message parsed = deserialize_message("{invalid_json");

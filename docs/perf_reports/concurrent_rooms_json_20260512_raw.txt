@@ -1,0 +1,7 @@
+[wave 1] ok=240/300
+  - client#240 failed: unexpected response type: system
+  - client#241 failed: unexpected response type: system
+  - client#242 failed: unexpected response type: system
+  - client#243 failed: unexpected response type: system
+  - client#244 failed: unexpected response type: system
+[summary] total=300, failed=60, success_rate=80.00%

@@ -9,6 +9,21 @@
 - **最终汇总**: 新增 [`docs/test_reports/test_summary_2026-05-11.md`](test_reports/test_summary_2026-05-11.md) 作为本轮最终收尾汇总。
 - **状态说明**: 这次收尾主要是把已验证状态、停止项和可追踪入口统一落文，便于后续维护或新增需求接手。
 
+## 📅 2026-05-11 - 密钥扫描纳入 CI（非阻断）
+
+- **动作**: 新增 `secret-scan` 独立 workflow job，执行 `scripts/scan_secrets.sh` 并输出 job summary / artifact。
+- **结果**: 本地 tracked 扫描通过，未发现 secret-like pattern。
+- **记录**: 新增 [`docs/release_records/secret-scan-20260511.md`](release_records/secret-scan-20260511.md) 与原始文本报告。
+
+## 📅 2026-05-12 - 300 并发压测补跑
+
+- **执行**: 使用 `scripts/test_concurrent_connections.py` 对 `ws://127.0.0.1:8080` 执行 300 并发压测。
+- **结果**:
+  - `connect_only`: `300/300`（100.00%）
+  - `rooms_json`: `240/300`（80.00%）
+- **观察**: `rooms_json` 失败样本多为 `unexpected response type: system`，说明命令路径在高并发下仍有消息序列差异。
+- **记录**: 新增 [`docs/perf_reports/concurrent_connections_20260512.md`](perf_reports/concurrent_connections_20260512.md) 及原始输出文件。
+
 ## 📅 2026-05-09 - 浏览器交互补跑与 AI 页面回归修复
 
 - **验证通过**: 登录页注册/登录成功；登录后私聊、群聊、AI 路由切换正常；AI 页面消息可发送并收到回复。

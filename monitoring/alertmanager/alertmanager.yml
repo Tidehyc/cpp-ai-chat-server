@@ -20,7 +20,7 @@ route:
 receivers:
   - name: default-log
 
-  # Alertmanager 先投递到本地 relay，再由 relay 转成飞书机器人消息格式。
+                                                                                                                                                                                                    # Alertmanager 先投递到本地 relay，再由 relay 转成飞书机器人消息格式。
   - name: webhook-critical
     webhook_configs:
       - url: "http://feishu-relay:8088/webhook"

@@ -4,6 +4,7 @@
 
 #include <cstdio>
 #include <ctime>
+#include <unistd.h>
 #include <memory>
 #include <string>
 
@@ -14,9 +15,14 @@ namespace
 
     std::string make_temp_db_path()
     {
-        const std::string path = "/tmp/chat_migration_" + std::to_string(std::time(nullptr)) + "_" + std::to_string(std::rand()) + ".db";
-        std::remove(path.c_str());
-        return path;
+        char path_template[] = "/tmp/chat_migration_XXXXXX.db";
+        int fd = mkstemps(path_template, 3);
+        if (fd >= 0)
+        {
+            close(fd);
+            std::remove(path_template);
+        }
+        return path_template;
     }
 
     int read_schema_version(sqlite3 *db, const char *key)
