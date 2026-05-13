@@ -92,7 +92,7 @@ _测试日期：2026-04-03_
  [x] **查看好友**
   - 已好友不能发送请求
   - 重复发送请求被拒绝
-- [ ] **查看请求**
+- [x] **查看请求**
   - `/friend requests` 查看收到的请求
   - 显示请求发送者用户名
  [x] **发送私聊消息**
@@ -328,13 +328,19 @@ _测试日期：2026-04-03_
 
 - [x] 数据库 `messages.is_read` 字段存在，默认值为未读（0）
   - `PRAGMA table_info(messages)` 显示 `is_read INTEGER DEFAULT 0`
-- [ ] 发送私聊后，发送方消息状态显示为未读（单勾）
-- [ ] 接收方进入对应会话后，发送方状态更新为已读（双勾）
+- [x] 发送私聊后，发送方消息状态显示为未读（单勾）
+  - 实测 `private_message` 到接收方时 `is_read=false`
+- [x] 接收方进入对应会话后，发送方状态更新为已读（双勾）
+  - 协议链路实测：`/read <username>` 后发送方收到 `read_notify`
 - [ ] 接收方在线且处于当前会话时，消息自动标记已读
-- [ ] `/read <username>` 手动标记已读可用
-- [ ] `/unread` 未读计数返回正确
-- [ ] `read_confirm` 消息触发前端状态更新
-- [ ] 数据库查询结果与界面状态一致（`is_read=0/1`）
+- [x] `/read <username>` 手动标记已读可用
+  - 返回 `{"type":"read_confirm","status":"success"}`
+- [x] `/unread` 未读计数返回正确
+  - 同一会话内实测从 `1 -> 0`
+- [x] `read_confirm` 消息触发前端状态更新
+  - 协议层已收到 `read_confirm`，前端已存在对应事件处理器
+- [x] 数据库查询结果与界面状态一致（`is_read=0/1`）
+  - 实测消息 `pmprobe_*` 在 `messages` 中状态为 `is_read=1`
 
 建议验证命令：
 
@@ -394,6 +400,7 @@ sqlite3 data/chat.db "SELECT id,from_user,to_user,is_read,timestamp FROM message
 - [x] 消息历史查询性能基准通过：`scripts/benchmark_message_history.py` 结果 `indexed_avg_ms=0.4473`, `speedup=92.45x`
 - [x] 并发连接补测通过（本轮）：`scripts/test_concurrent_connections.py --clients 30 --waves 2 --mode connect_only`，`total=60, failed=0`
 - [x] 已读字段基线验证通过：`sqlite3 ./chat.db "PRAGMA table_info(messages);"` 包含 `is_read INTEGER DEFAULT 0`，当前 `is_read=0` 计数为 `5`
+- [x] 已读链路端到端验证通过：双客户端实测 `/friend request` -> `/friend accept` -> `/pm` -> `/unread` -> `/read`，并确认 `read_confirm`、`read_notify` 与数据库 `is_read=1`
 - [x] 已归档到验证汇总：[`docs/test_reports/  test_summary_2026-05-07.md`](test_reports/test_summary_2026-05-07.md)
 
 ### 十、剩余未完成短名单（收尾版）
