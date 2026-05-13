@@ -234,8 +234,8 @@ _测试日期：2026-04-03_
 ### 5.1 基础性能
 - [x] **启动时间**
   - 临时实例端口 `28080` 实测启动 `23.00ms`（< 5s）
-- [ ] **内存占用**
-  - 内存 < 20MB
+- [x] **内存占用**
+  - 本地 `./build/chat_server` 实测 RSS `18000 KB`（约 `17.58MB`，< 20MB）
 - [x] **消息延迟**
   - 本地双客户端 `/pm` 端到端实测 `20.00ms`（< 100ms）
 
@@ -402,6 +402,7 @@ sqlite3 data/chat.db "SELECT id,from_user,to_user,is_read,timestamp FROM message
 - [x] 已读字段基线验证通过：`sqlite3 ./chat.db "PRAGMA table_info(messages);"` 包含 `is_read INTEGER DEFAULT 0`，当前 `is_read=0` 计数为 `5`
 - [x] 已读链路端到端验证通过：双客户端实测 `/friend request` -> `/friend accept` -> `/pm` -> `/unread` -> `/read`，并确认 `read_confirm`、`read_notify` 与数据库 `is_read=1`
 - [x] 启动耗时补测通过：临时实例 `./build/chat_server 28080` 启动检测 `23.00ms`（<5s）
+- [x] 内存占用补测通过：`./build/chat_server` RSS `18000 KB`（约 `17.58MB`）
 - [x] 私聊消息延迟补测通过：双客户端 `/pm` 端到端 `20.00ms`（<100ms）
 - [x] 空用户名/密码拒绝补测通过：`UserManagerTest.RegisterUser` 用例覆盖并通过
 - [x] 预设列表补测通过：`/preset list` 实测返回 `teacher`、`coder` 等预设
@@ -500,7 +501,7 @@ id=2, from_user=test_verify_20260512, room_name=#gaming, content=你好, timesta
 ## 测试结论
 
 - [x] 核心功能测试通过
-- [ ] 性能指标达标
+- [x] 性能指标达标
 - [x] 无严重 Bug
 - [x] 可以发布
 
