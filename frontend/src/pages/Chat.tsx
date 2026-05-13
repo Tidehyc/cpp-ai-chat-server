@@ -53,6 +53,32 @@ export default function Chat() {
   const [showExportModal, setShowExportModal] = useState(false)
   const [showSessionExpired, setShowSessionExpired] = useState(false)
 
+  const formatMessageTimestamp = (timestamp: unknown) => {
+    if (timestamp === null || timestamp === undefined || timestamp === '') {
+      return new Date().toLocaleString('zh-CN')
+    }
+
+    if (typeof timestamp === 'number' && Number.isFinite(timestamp)) {
+      return new Date(timestamp > 1e12 ? timestamp : timestamp * 1000).toLocaleString('zh-CN')
+    }
+
+    if (typeof timestamp === 'string') {
+      const numericTimestamp = Number(timestamp)
+      if (Number.isFinite(numericTimestamp)) {
+        return new Date(numericTimestamp > 1e12 ? numericTimestamp : numericTimestamp * 1000).toLocaleString('zh-CN')
+      }
+
+      const parsed = new Date(timestamp)
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed.toLocaleString('zh-CN')
+      }
+
+      return timestamp
+    }
+
+    return new Date().toLocaleString('zh-CN')
+  }
+
   // 消息列表 ref
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const selectedFriendRef = useRef<string | null>(null)
@@ -146,7 +172,7 @@ export default function Chat() {
       from_user: fromUser,
       to_user: username || undefined,
       content,
-      timestamp: message.timestamp || new Date().toLocaleString('zh-CN'),
+      timestamp: formatMessageTimestamp(message.timestamp),
       is_own: false,
       is_read: isRead,
     }, false)
@@ -267,7 +293,7 @@ export default function Chat() {
         from_user: '系统',
         to_user: username || undefined,
         content: '发送失败：' + content,
-        timestamp: new Date().toLocaleString('zh-CN'),
+        timestamp: formatMessageTimestamp(Date.now()),
         is_own: false,
         is_error: true,
       })

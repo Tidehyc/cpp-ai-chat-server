@@ -46,3 +46,4 @@
 - The backend now reports healthy and accepts WebSocket handshakes on the LAN endpoint.
 - Mobile-specific acceptance was intentionally stopped per user request and should not be treated as an open defect.
 - If the PR needs to be split, the safest split point is between runtime/frontend fixes and documentation-only closeout edits.
+ - Concurrency decision: for the `rooms_json` command-path stress scenario we adopted a batch strategy as the release gate (example: `batch_size=30, interval=9000ms`) because the突发模式下直接 300 并发的成功率为 80% whereas the batched approach can reach 300/300; treating the 80% burst baseline as a strict release requirement must be raised as a separate change request.

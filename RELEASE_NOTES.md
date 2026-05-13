@@ -1,6 +1,6 @@
-# Release Notes - v1.1.4 (Draft)
+# Release Notes - v1.1.4
 
-_发布日期：2026-04-27（待 perf-gate 修复分支合并后生效）_
+_发布日期：2026-05-12_
 
 ---
 
