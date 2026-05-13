@@ -44,8 +44,8 @@ _测试日期：2026-04-03_
 - [x] **加入/离开房间**
   - 用户可成功加入 #gaming、#code 等预设房间
   - 加入后立即可发送消息到房间
-- [ ] **创建房间**
-  - `/create room test_room` 创建成功
+- [x] **创建房间**
+  - 浏览器回归与历史记录已验证创建房间成功并可自动切换进入
  [x] **@AI 触发**
 
 ### 1.3 AI 对话
@@ -59,8 +59,8 @@ _测试日期：2026-04-03_
 - [x] **多轮对话**
   - `ConversationTest.MultiTurnConversation` 通过
   - `ConversationTest.GetContext` / `ConversationTest.ClearContext` 通过
-- [ ] **预设使用**
-  - `/preset list` 列出预设
+- [x] **预设使用**
+  - `/preset list` 实测返回可用预设（含 `teacher`、`coder`）
  [x] **消息广播**
   - 预设影响 AI 回复风格
 
@@ -404,6 +404,7 @@ sqlite3 data/chat.db "SELECT id,from_user,to_user,is_read,timestamp FROM message
 - [x] 启动耗时补测通过：临时实例 `./build/chat_server 28080` 启动检测 `23.00ms`（<5s）
 - [x] 私聊消息延迟补测通过：双客户端 `/pm` 端到端 `20.00ms`（<100ms）
 - [x] 空用户名/密码拒绝补测通过：`UserManagerTest.RegisterUser` 用例覆盖并通过
+- [x] 预设列表补测通过：`/preset list` 实测返回 `teacher`、`coder` 等预设
 - [x] 已归档到验证汇总：[`docs/test_reports/  test_summary_2026-05-07.md`](test_reports/test_summary_2026-05-07.md)
 
 ### 十、剩余未完成短名单（收尾版）
