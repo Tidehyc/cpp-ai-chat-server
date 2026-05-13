@@ -1,4 +1,4 @@
-# C++ AI Chat Server v1.1.3
+# C++ AI Chat Server v1.1.4
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![C++](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://isocpp.org/)
@@ -8,7 +8,7 @@
 
 ---
 
-## 🆕 最近更新（v1.1.3）
+## 🆕 最近更新（v1.1.4）
 
 - 完成提交前隐私扫描：移除测试脚本明文 API Key，统一走环境变量注入
 - 完成大规模改动 PR 合并收尾：功能分支合并回 `main`，临时分支已清理

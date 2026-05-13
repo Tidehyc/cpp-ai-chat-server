@@ -49,6 +49,32 @@ export default function AIAssistant() {
   const [showHistoryModal, setShowHistoryModal] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
 
+  const formatMessageTimestamp = (timestamp: unknown) => {
+    if (timestamp === null || timestamp === undefined || timestamp === '') {
+      return new Date().toLocaleString('zh-CN')
+    }
+
+    if (typeof timestamp === 'number' && Number.isFinite(timestamp)) {
+      return new Date(timestamp > 1e12 ? timestamp : timestamp * 1000).toLocaleString('zh-CN')
+    }
+
+    if (typeof timestamp === 'string') {
+      const numericTimestamp = Number(timestamp)
+      if (Number.isFinite(numericTimestamp)) {
+        return new Date(numericTimestamp > 1e12 ? numericTimestamp : numericTimestamp * 1000).toLocaleString('zh-CN')
+      }
+
+      const parsed = new Date(timestamp)
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed.toLocaleString('zh-CN')
+      }
+
+      return timestamp
+    }
+
+    return new Date().toLocaleString('zh-CN')
+  }
+
   // 消息列表 ref
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const {
@@ -86,7 +112,7 @@ export default function AIAssistant() {
       type: 'ai',
       from_user: 'AI',
       content,
-      timestamp: message.timestamp || new Date().toLocaleString('zh-CN'),
+      timestamp: formatMessageTimestamp(message.timestamp),
       is_ai: true,
       is_own: false,
     })

@@ -25,6 +25,68 @@ namespace chat
     namespace
     {
 
+        std::string extract_error_detail(const std::string &payload)
+        {
+            if (payload.empty())
+            {
+                return "";
+            }
+
+            try
+            {
+                const auto parsed = json::parse(payload);
+
+                if (parsed.contains("error"))
+                {
+                    const auto &error_field = parsed["error"];
+                    if (error_field.is_string())
+                    {
+                        return error_field.get<std::string>();
+                    }
+                    if (error_field.is_object() && error_field.contains("message") && error_field["message"].is_string())
+                    {
+                        return error_field["message"].get<std::string>();
+                    }
+                }
+
+                if (parsed.contains("message") && parsed["message"].is_string())
+                {
+                    return parsed["message"].get<std::string>();
+                }
+            }
+            catch (const std::exception &)
+            {
+                // 非 JSON 错误体时，回退为简短原文
+            }
+
+            return payload.substr(0, 120);
+        }
+
+        std::string format_upstream_error(long status_code, const std::string &payload)
+        {
+            const std::string detail = extract_error_detail(payload);
+            const std::string detail_suffix = detail.empty() ? "" : "（" + detail + "）";
+
+            switch (status_code)
+            {
+            case 400:
+                return "AI 请求参数无效，请联系管理员检查模型配置。" + detail_suffix;
+            case 401:
+            case 403:
+                return "AI 服务鉴权失败，请检查 API Key 配置。" + detail_suffix;
+            case 402:
+                return "AI 服务额度不足，请充值或更换可用 API Key 后重试。" + detail_suffix;
+            case 429:
+                return "AI 服务请求过于频繁，请稍后重试。" + detail_suffix;
+            default:
+                if (status_code >= 500)
+                {
+                    return "AI 服务暂时不可用，请稍后重试。" + detail_suffix;
+                }
+                return "AI 服务错误，状态码：" + std::to_string(status_code) + detail_suffix;
+            }
+        }
+
         std::string perform_chat_request(const std::string &api_key,
                                          const std::string &api_url,
                                          const std::string &model,
@@ -129,7 +191,7 @@ namespace chat
 
             Logger::error("API error, status code: " + std::to_string(response_code));
             Logger::debug("API error payload bytes=" + std::to_string(response_buf.data.size()));
-            return "AI 服务错误，状态码：" + std::to_string(response_code) + " - " + response_buf.data.substr(0, 200);
+            return format_upstream_error(response_code, response_buf.data);
         }
 
     } // namespace

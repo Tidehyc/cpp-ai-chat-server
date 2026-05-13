@@ -39,6 +39,32 @@ export default function Contact() {
   const [showExportModal, setShowExportModal] = useState(false)
   const [showSessionExpired, setShowSessionExpired] = useState(false)
 
+  const formatMessageTimestamp = (timestamp: unknown) => {
+    if (timestamp === null || timestamp === undefined || timestamp === '') {
+      return new Date().toLocaleString('zh-CN')
+    }
+
+    if (typeof timestamp === 'number' && Number.isFinite(timestamp)) {
+      return new Date(timestamp > 1e12 ? timestamp : timestamp * 1000).toLocaleString('zh-CN')
+    }
+
+    if (typeof timestamp === 'string') {
+      const numericTimestamp = Number(timestamp)
+      if (Number.isFinite(numericTimestamp)) {
+        return new Date(numericTimestamp > 1e12 ? numericTimestamp : numericTimestamp * 1000).toLocaleString('zh-CN')
+      }
+
+      const parsed = new Date(timestamp)
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed.toLocaleString('zh-CN')
+      }
+
+      return timestamp
+    }
+
+    return new Date().toLocaleString('zh-CN')
+  }
+
   // 消息列表 ref
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const {
@@ -90,7 +116,7 @@ export default function Contact() {
       from_user: fromUser,
       room_name: roomName,
       content,
-      timestamp: message.timestamp ? new Date(message.timestamp * 1000).toLocaleString('zh-CN') : new Date().toLocaleString('zh-CN'),
+      timestamp: formatMessageTimestamp(message.timestamp),
       is_own: fromUser === username,
     })
   }
@@ -109,7 +135,7 @@ export default function Contact() {
           from_user: 'AI',
           room_name: roomName,
           content: 'AI 思考中...',
-          timestamp: new Date().toLocaleString('zh-CN'),
+          timestamp: formatMessageTimestamp(Date.now()),
           is_ai: true,
           is_own: false,
         })
@@ -226,7 +252,7 @@ export default function Contact() {
           from_user: 'AI',
           room_name: roomName,
           content,
-          timestamp: msg.timestamp ? new Date(msg.timestamp * 1000).toLocaleString('zh-CN') : new Date().toLocaleString('zh-CN'),
+          timestamp: formatMessageTimestamp(msg.timestamp),
           is_ai: true,
           is_own: false,
         })
