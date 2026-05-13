@@ -232,12 +232,12 @@ _测试日期：2026-04-03_
 ## 五、性能测试
 
 ### 5.1 基础性能
-- [ ] **启动时间**
-  - 服务器启动 < 5s
+- [x] **启动时间**
+  - 临时实例端口 `28080` 实测启动 `23.00ms`（< 5s）
 - [ ] **内存占用**
   - 内存 < 20MB
-- [ ] **消息延迟**
-  - 消息延迟 < 100ms
+- [x] **消息延迟**
+  - 本地双客户端 `/pm` 端到端实测 `20.00ms`（< 100ms）
 
 ### 5.2 并发测试
 - [x] **多用户连接**
@@ -252,8 +252,8 @@ _测试日期：2026-04-03_
 ## 六、边界情况测试
 
 ### 6.1 异常输入
-- [ ] **空用户名/密码**
-  - 注册/登录拒绝
+- [x] **空用户名/密码**
+  - `UserManagerTest.RegisterUser` 覆盖空用户名/空密码拒绝并通过
 - [ ] **超长消息**
   - 消息长度限制
 - [ ] **特殊字符**
@@ -401,6 +401,9 @@ sqlite3 data/chat.db "SELECT id,from_user,to_user,is_read,timestamp FROM message
 - [x] 并发连接补测通过（本轮）：`scripts/test_concurrent_connections.py --clients 30 --waves 2 --mode connect_only`，`total=60, failed=0`
 - [x] 已读字段基线验证通过：`sqlite3 ./chat.db "PRAGMA table_info(messages);"` 包含 `is_read INTEGER DEFAULT 0`，当前 `is_read=0` 计数为 `5`
 - [x] 已读链路端到端验证通过：双客户端实测 `/friend request` -> `/friend accept` -> `/pm` -> `/unread` -> `/read`，并确认 `read_confirm`、`read_notify` 与数据库 `is_read=1`
+- [x] 启动耗时补测通过：临时实例 `./build/chat_server 28080` 启动检测 `23.00ms`（<5s）
+- [x] 私聊消息延迟补测通过：双客户端 `/pm` 端到端 `20.00ms`（<100ms）
+- [x] 空用户名/密码拒绝补测通过：`UserManagerTest.RegisterUser` 用例覆盖并通过
 - [x] 已归档到验证汇总：[`docs/test_reports/  test_summary_2026-05-07.md`](test_reports/test_summary_2026-05-07.md)
 
 ### 十、剩余未完成短名单（收尾版）
