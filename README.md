@@ -252,6 +252,7 @@ cpp-ai-chat-server/
 - [docs/RELEASE_DOC_CHECKLIST.md](docs/RELEASE_DOC_CHECKLIST.md) - 发布文档核对清单
 - [docs/DB_BACKUP_RECOVERY_RUNBOOK.md](docs/DB_BACKUP_RECOVERY_RUNBOOK.md) - 数据库备份与恢复演练手册
 - [scripts/verify_restore_db.sh](scripts/verify_restore_db.sh) - 数据库恢复后一键验证脚本
+- [scripts/ci_persistence_test.py](scripts/ci_persistence_test.py) - Docker 卷持久化验证脚本
 - [docs/BRANCH_PROTECTION_REQUIRED_CHECKS.md](docs/BRANCH_PROTECTION_REQUIRED_CHECKS.md) - 分支保护与必过检查配置
 - [docs/BRANCH_PROTECTION_RELEASE_TEMPLATE.md](docs/BRANCH_PROTECTION_RELEASE_TEMPLATE.md) - release 分支保护模板
 - [docs/STUDY_NOTES_INDEX.md](docs/STUDY_NOTES_INDEX.md) - 学习笔记总览
