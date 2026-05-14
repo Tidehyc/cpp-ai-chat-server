@@ -64,6 +64,30 @@ async def ws_connect(uri: str, timeout: float = 5.0) -> websockets.WebSocketClie
     return await websockets.connect(uri, **connect_kwargs)
 
 
+async def wait_for_login_success(
+    ws: websockets.WebSocketClientProtocol,
+    timeout: float,
+) -> bool:
+    """循环读取消息，直到捕获登录成功提示。"""
+    end = time.time() + timeout
+    while time.time() < end:
+        try:
+            resp = await asyncio.wait_for(ws.recv(), timeout=0.5)
+        except asyncio.TimeoutError:
+            continue
+
+        try:
+            resp_obj = json.loads(resp)
+            content = resp_obj.get("content", "")
+            if isinstance(content, str) and "登录成功" in content:
+                return True
+        except Exception:
+            if isinstance(resp, str) and "登录成功" in resp:
+                return True
+
+    return False
+
+
 async def test_ai_request_timeout(uri: str) -> bool:
     """测试 AI 请求超时的错误处理。"""
     print("  -> 测试 AI 请求超时处理")
@@ -86,24 +110,7 @@ async def test_ai_request_timeout(uri: str) -> bool:
         login_cmd = f"/login {username} {password}"
         await asyncio.wait_for(ws.send(login_cmd), timeout=5)
 
-        # 循环读取消息，查找登录成功提示
-        end = time.time() + 5
-        success = False
-        while time.time() < end:
-            try:
-                resp = await asyncio.wait_for(ws.recv(), timeout=0.5)
-            except asyncio.TimeoutError:
-                continue
-            try:
-                resp_obj = json.loads(resp)
-                content = resp_obj.get("content", "")
-                if isinstance(content, str) and "登录成功" in content:
-                    success = True
-                    break
-            except Exception:
-                if isinstance(resp, str) and "登录成功" in resp:
-                    success = True
-                    break
+        success = await wait_for_login_success(ws, timeout=5)
 
         if not success:
             print(f"    ✗ 登录失败")
@@ -177,15 +184,7 @@ async def test_login_with_timeout(uri: str) -> bool:
 
         try:
             await asyncio.wait_for(ws.send(login_cmd), timeout=1)
-            try:
-                response = await asyncio.wait_for(ws.recv(), timeout=1)
-            except asyncio.TimeoutError:
-                response = ""
-            try:
-                resp_obj = json.loads(response)
-                success = isinstance(resp_obj.get("content"), str) and "登录成功" in resp_obj.get("content")
-            except Exception:
-                success = "登录成功" in response
+            success = await wait_for_login_success(ws, timeout=2)
 
             if success:
                 print(f"    ✓ 登录成功（未超时）")
@@ -225,12 +224,7 @@ async def test_connection_recovery(uri: str) -> bool:
 
         login_cmd = f"/login {username} {password}"
         await asyncio.wait_for(ws.send(login_cmd), timeout=5)
-        resp = await asyncio.wait_for(ws.recv(), timeout=5)
-        try:
-            resp_obj = json.loads(resp)
-            success = isinstance(resp_obj.get("content"), str) and "登录成功" in resp_obj.get("content")
-        except Exception:
-            success = "登录成功" in resp
+        success = await wait_for_login_success(ws, timeout=5)
 
         if not success:
             print(f"    ✗ 登录失败")
@@ -254,23 +248,7 @@ async def test_connection_recovery(uri: str) -> bool:
             login_cmd = f"/login {username} {password}"
             await asyncio.wait_for(ws.send(login_cmd), timeout=5)
 
-            end = time.time() + 5
-            relogin_success = False
-            while time.time() < end:
-                try:
-                    resp = await asyncio.wait_for(ws.recv(), timeout=0.5)
-                except asyncio.TimeoutError:
-                    continue
-                try:
-                    resp_obj = json.loads(resp)
-                    content = resp_obj.get("content", "")
-                    if isinstance(content, str) and "登录成功" in content:
-                        relogin_success = True
-                        break
-                except Exception:
-                    if isinstance(resp, str) and "登录成功" in resp:
-                        relogin_success = True
-                        break
+            relogin_success = await wait_for_login_success(ws, timeout=5)
 
             if relogin_success:
                 print(f"    ✓ 重连后登录成功，连接恢复正常")
