@@ -58,7 +58,7 @@ def ensure_docker_compose_up() -> None:
 
 async def ws_connect(uri: str) -> websockets.WebSocketClientProtocol:
     """建立 WebSocket 连接。"""
-    connect_kwargs = {"subprotocols": ["chat"], "open_timeout": 5, "close_timeout": 5}
+    connect_kwargs = {"open_timeout": 5, "close_timeout": 5}
     if uri.startswith("wss://"):
         connect_kwargs["ssl"] = ssl._create_unverified_context()
     
