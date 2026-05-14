@@ -74,26 +74,39 @@ async def ws_register_and_login(
 ) -> bool:
     """通过 WebSocket 注册和登录。"""
     try:
-        # 注册
-        register_msg = json.dumps({
-            "type": "register",
-            "username": username,
-            "password": password,
-        })
-        await asyncio.wait_for(ws.send(register_msg), timeout=timeout)
-        response = await asyncio.wait_for(ws.recv(), timeout=timeout)
-        
+        # 使用文本命令进行注册/登录，服务器期望命令格式如 /register <user> <pass>
+        register_cmd = f"/register {username} {password}"
+        await asyncio.wait_for(ws.send(register_cmd), timeout=timeout)
+        # 读取服务器返回的 system 消息（可能是注册成功提示）
+        try:
+            _ = await asyncio.wait_for(ws.recv(), timeout=timeout)
+        except asyncio.TimeoutError:
+            pass
+
         # 登录
-        login_msg = json.dumps({
-            "type": "login",
-            "username": username,
-            "password": password,
-        })
-        await asyncio.wait_for(ws.send(login_msg), timeout=timeout)
-        response = await asyncio.wait_for(ws.recv(), timeout=timeout)
-        resp_obj = json.loads(response)
-        
-        return resp_obj.get("type") == "login" and resp_obj.get("success")
+        login_cmd = f"/login {username} {password}"
+        await asyncio.wait_for(ws.send(login_cmd), timeout=timeout)
+
+        # 等待登录成功的 system 消息
+        end = time.time() + timeout
+        while time.time() < end:
+            try:
+                resp = await asyncio.wait_for(ws.recv(), timeout=0.5)
+            except asyncio.TimeoutError:
+                continue
+            try:
+                resp_obj = json.loads(resp)
+                # 服务器将登录成功以 system 消息返回，content 中包含 "登录成功"
+                content = resp_obj.get("content", "")
+                if isinstance(content, str) and "登录成功" in content:
+                    return True
+            except Exception:
+                # 非 JSON 或格式不同，继续读取
+                if isinstance(resp, str) and "登录成功" in resp:
+                    return True
+
+        print(f"    ✗ 注册/登录失败: 未收到登录成功消息")
+        return False
     except Exception as e:
         print(f"    ✗ 注册/登录失败: {e}")
         return False
@@ -107,12 +120,9 @@ async def ws_send_private_message(
 ) -> bool:
     """发送私聊消息。"""
     try:
-        msg = json.dumps({
-            "type": "message",
-            "to_user": to_user,
-            "text": text,
-        })
-        await asyncio.wait_for(ws.send(msg), timeout=timeout)
+        # 使用命令格式发送私聊：/pm <用户名> <消息内容>
+        cmd = f"/pm {to_user} {text}"
+        await asyncio.wait_for(ws.send(cmd), timeout=timeout)
         return True
     except Exception as e:
         print(f"    ✗ 发送私聊失败: {e}")
@@ -126,21 +136,32 @@ async def ws_query_private_history(
 ) -> Optional[List[dict]]:
     """查询与某个用户的私聊历史。"""
     try:
-        query_msg = json.dumps({
-            "type": "query_private_history",
-            "with_user": with_user,
-        })
-        await asyncio.wait_for(ws.send(query_msg), timeout=timeout)
-        
-        # 接收历史消息响应
-        response = await asyncio.wait_for(ws.recv(), timeout=timeout)
-        resp_obj = json.loads(response)
-        
-        if resp_obj.get("type") == "private_history":
-            return resp_obj.get("messages", [])
-        else:
-            print(f"    ⚠️  服务器不支持查询历史（协议兼容性），尝试备选方案...")
+        # 使用 /history 查询私聊历史，目标使用 @username
+        cmd = f"/history @{with_user}"
+        await asyncio.wait_for(ws.send(cmd), timeout=timeout)
+
+        # 收集来自服务器的 system 消息作为历史行
+        end = time.time() + timeout
+        lines: List[dict] = []
+        while time.time() < end:
+            try:
+                resp = await asyncio.wait_for(ws.recv(), timeout=0.5)
+            except asyncio.TimeoutError:
+                continue
+            try:
+                resp_obj = json.loads(resp)
+                content = resp_obj.get("content") or resp_obj.get("message") or resp_obj.get("text")
+                if content:
+                    lines.append({"text": content})
+            except Exception:
+                # 非 JSON 直接当作文本处理
+                if isinstance(resp, str):
+                    lines.append({"text": resp})
+
+        if not lines:
+            print(f"    ⚠️  查询未返回任何历史行")
             return None
+        return lines
     except asyncio.TimeoutError:
         print(f"    ⚠️  查询超时，可能服务器不支持此协议")
         return None
@@ -187,22 +208,20 @@ async def private_history_test(uri: str) -> int:
     # 步骤 2：建立好友关系（A 向 B 发送请求，B 接受）
     print(f"  -> 步骤2：建立好友关系")
     try:
-        # A 发送好友请求
-        friend_req = json.dumps({
-            "type": "friend_request",
-            "to_user": user_b,
-        })
-        await asyncio.wait_for(ws_a.send(friend_req), timeout=5)
-        await asyncio.wait_for(ws_a.recv(), timeout=5)
+        # A 发送好友请求（命令格式：/friend request <用户名>）
+        await asyncio.wait_for(ws_a.send(f"/friend request {user_b}"), timeout=5)
+        try:
+            await asyncio.wait_for(ws_a.recv(), timeout=5)
+        except asyncio.TimeoutError:
+            pass
         print(f"    ✓ 好友请求已发送")
-        
-        # B 接受好友请求
-        accept_msg = json.dumps({
-            "type": "friend_accept",
-            "from_user": user_a,
-        })
-        await asyncio.wait_for(ws_b.send(accept_msg), timeout=5)
-        await asyncio.wait_for(ws_b.recv(), timeout=5)
+
+        # B 查看并接受好友请求（命令格式：/friend accept <用户名>）
+        await asyncio.wait_for(ws_b.send(f"/friend accept {user_a}"), timeout=5)
+        try:
+            await asyncio.wait_for(ws_b.recv(), timeout=5)
+        except asyncio.TimeoutError:
+            pass
         print(f"    ✓ 好友请求已接受，好友关系建立")
     except Exception as e:
         print(f"    ✗ 建立好友关系失败: {e}")

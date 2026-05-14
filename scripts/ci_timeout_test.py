@@ -64,6 +64,30 @@ async def ws_connect(uri: str, timeout: float = 5.0) -> websockets.WebSocketClie
     return await websockets.connect(uri, **connect_kwargs)
 
 
+async def wait_for_login_success(
+    ws: websockets.WebSocketClientProtocol,
+    timeout: float,
+) -> bool:
+    """循环读取消息，直到捕获登录成功提示。"""
+    end = time.time() + timeout
+    while time.time() < end:
+        try:
+            resp = await asyncio.wait_for(ws.recv(), timeout=0.5)
+        except asyncio.TimeoutError:
+            continue
+
+        try:
+            resp_obj = json.loads(resp)
+            content = resp_obj.get("content", "")
+            if isinstance(content, str) and "登录成功" in content:
+                return True
+        except Exception:
+            if isinstance(resp, str) and "登录成功" in resp:
+                return True
+
+    return False
+
+
 async def test_ai_request_timeout(uri: str) -> bool:
     """测试 AI 请求超时的错误处理。"""
     print("  -> 测试 AI 请求超时处理")
@@ -75,24 +99,20 @@ async def test_ai_request_timeout(uri: str) -> bool:
         username = f"timeout_test_{int(time.time())}"
         password = "test123456"
         
-        register_msg = json.dumps({
-            "type": "register",
-            "username": username,
-            "password": password,
-        })
-        await asyncio.wait_for(ws.send(register_msg), timeout=5)
-        await asyncio.wait_for(ws.recv(), timeout=5)
-        
-        login_msg = json.dumps({
-            "type": "login",
-            "username": username,
-            "password": password,
-        })
-        await asyncio.wait_for(ws.send(login_msg), timeout=5)
-        resp = await asyncio.wait_for(ws.recv(), timeout=5)
-        resp_obj = json.loads(resp)
-        
-        if not resp_obj.get("success"):
+        # 使用文本命令注册/登录
+        register_cmd = f"/register {username} {password}"
+        await asyncio.wait_for(ws.send(register_cmd), timeout=5)
+        try:
+            await asyncio.wait_for(ws.recv(), timeout=5)
+        except asyncio.TimeoutError:
+            pass
+
+        login_cmd = f"/login {username} {password}"
+        await asyncio.wait_for(ws.send(login_cmd), timeout=5)
+
+        success = await wait_for_login_success(ws, timeout=5)
+
+        if not success:
             print(f"    ✗ 登录失败")
             await ws.close()
             return False
@@ -101,12 +121,9 @@ async def test_ai_request_timeout(uri: str) -> bool:
         
         # 发送 AI 请求
         # 注意：如果 AI API 配置不存在或额度不足，可能会返回友好错误
-        ai_msg = json.dumps({
-            "type": "message",
-            "to_user": "ai",
-            "text": "你好，这是一个测试消息",
-        })
-        await asyncio.wait_for(ws.send(ai_msg), timeout=5)
+        # 使用 /pm ai 发送给 AI，触发服务器的 AI 处理路径
+        ai_cmd = "/pm ai 你好，这是一个测试消息"
+        await asyncio.wait_for(ws.send(ai_cmd), timeout=5)
         
         # 等待 AI 响应（可能超时）
         try:
@@ -148,15 +165,14 @@ async def test_login_with_timeout(uri: str) -> bool:
         password = "test123456"
         
         # 第一次注册
-        register_msg = json.dumps({
-            "type": "register",
-            "username": username,
-            "password": password,
-        })
-        
+        register_cmd = f"/register {username} {password}"
+
         try:
-            await asyncio.wait_for(ws.send(register_msg), timeout=1)
-            response = await asyncio.wait_for(ws.recv(), timeout=1)
+            await asyncio.wait_for(ws.send(register_cmd), timeout=1)
+            try:
+                response = await asyncio.wait_for(ws.recv(), timeout=1)
+            except asyncio.TimeoutError:
+                response = ""
             print(f"    ✓ 注册请求完成（未超时）")
         except asyncio.TimeoutError:
             print(f"    ⚠️  注册请求超时（连接可能已建立）")
@@ -164,18 +180,13 @@ async def test_login_with_timeout(uri: str) -> bool:
             return True
         
         # 登录
-        login_msg = json.dumps({
-            "type": "login",
-            "username": username,
-            "password": password,
-        })
-        
+        login_cmd = f"/login {username} {password}"
+
         try:
-            await asyncio.wait_for(ws.send(login_msg), timeout=1)
-            response = await asyncio.wait_for(ws.recv(), timeout=1)
-            resp_obj = json.loads(response)
-            
-            if resp_obj.get("success"):
+            await asyncio.wait_for(ws.send(login_cmd), timeout=1)
+            success = await wait_for_login_success(ws, timeout=2)
+
+            if success:
                 print(f"    ✓ 登录成功（未超时）")
                 await ws.close()
                 return True
@@ -204,24 +215,18 @@ async def test_connection_recovery(uri: str) -> bool:
         username = f"recovery_test_{int(time.time())}"
         password = "test123456"
         
-        register_msg = json.dumps({
-            "type": "register",
-            "username": username,
-            "password": password,
-        })
-        await asyncio.wait_for(ws.send(register_msg), timeout=5)
-        await asyncio.wait_for(ws.recv(), timeout=5)
-        
-        login_msg = json.dumps({
-            "type": "login",
-            "username": username,
-            "password": password,
-        })
-        await asyncio.wait_for(ws.send(login_msg), timeout=5)
-        resp = await asyncio.wait_for(ws.recv(), timeout=5)
-        resp_obj = json.loads(resp)
-        
-        if not resp_obj.get("success"):
+        register_cmd = f"/register {username} {password}"
+        await asyncio.wait_for(ws.send(register_cmd), timeout=5)
+        try:
+            await asyncio.wait_for(ws.recv(), timeout=5)
+        except asyncio.TimeoutError:
+            pass
+
+        login_cmd = f"/login {username} {password}"
+        await asyncio.wait_for(ws.send(login_cmd), timeout=5)
+        success = await wait_for_login_success(ws, timeout=5)
+
+        if not success:
             print(f"    ✗ 登录失败")
             await ws.close()
             return False
@@ -239,17 +244,13 @@ async def test_connection_recovery(uri: str) -> bool:
             ws = await ws_connect(uri, timeout=5)
             print(f"    ✓ 重新连接成功")
             
-            # 重新登录
-            login_msg = json.dumps({
-                "type": "login",
-                "username": username,
-                "password": password,
-            })
-            await asyncio.wait_for(ws.send(login_msg), timeout=5)
-            resp = await asyncio.wait_for(ws.recv(), timeout=5)
-            resp_obj = json.loads(resp)
-            
-            if resp_obj.get("success"):
+            # 重新登录（命令格式）
+            login_cmd = f"/login {username} {password}"
+            await asyncio.wait_for(ws.send(login_cmd), timeout=5)
+
+            relogin_success = await wait_for_login_success(ws, timeout=5)
+
+            if relogin_success:
                 print(f"    ✓ 重连后登录成功，连接恢复正常")
                 await ws.close()
                 return True

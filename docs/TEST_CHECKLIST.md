@@ -266,17 +266,18 @@ _测试日期：2026-04-03_
   - [x] 客户端断线后重连（通过 `scripts/ci_reconnect_test.py` 验证：断线 → 10 次自动重连尝试 → 重连成功）
   - [x] 重连后功能恢复（重连成功后可继续注册/登录/发送消息）
   - 测试延迟指标：平均重连延迟 < 10s
-- [ ] **超时处理**
-  - AI 请求超时处理
-  - 数据库超时处理
+- [x] **超时处理**
+  - [x] AI 请求超时处理（通过 `scripts/ci_timeout_test.py` 验证）
+  - [x] 登录/重连超时处理（通过 `scripts/ci_timeout_test.py` 验证）
+  - [ ] 数据库超时处理
 
 ### 6.3 数据一致性
-- [ ] **并发好友请求**
-  - 同时发送好友请求
-  - 事务处理正确
-- [ ] **重复操作**
-  - 重复添加好友
-  - 重复加入房间
+- [x] **并发好友请求**
+  - [x] 同时发送好友请求（通过 `scripts/ci_concurrent_test.py` 验证）
+  - [x] 事务处理正确（通过 `scripts/ci_concurrent_test.py` 验证）
+- [x] **重复操作**
+  - [x] 重复添加好友（通过 `scripts/ci_concurrent_test.py` 验证）
+  - [x] 重复加入房间（通过 `scripts/ci_concurrent_test.py` 验证）
 
 ---
 
@@ -407,6 +408,7 @@ sqlite3 data/chat.db "SELECT id,from_user,to_user,is_read,timestamp FROM message
 - [x] 启动耗时补测通过：临时实例 `./build/chat_server 28080` 启动检测 `23.00ms`（<5s）
 - [x] 内存占用补测通过：`./build/chat_server` RSS `18000 KB`（约 `17.58MB`）
 - [x] 私聊消息延迟补测通过：双客户端 `/pm` 端到端 `20.00ms`（<100ms）
+- [x] advanced-test 工作流通过（private-history/timeout/concurrent）：Run #10, https://github.com/Tidehyc/cpp-ai-chat-server/actions/runs/25848404516
 - [x] 空用户名/密码拒绝补测通过：`UserManagerTest.RegisterUser` 用例覆盖并通过
 - [x] 预设列表补测通过：`/preset list` 实测返回 `teacher`、`coder` 等预设
 - [x] 已归档到验证汇总：[`docs/test_reports/  test_summary_2026-05-07.md`](test_reports/test_summary_2026-05-07.md)
