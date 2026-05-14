@@ -23,11 +23,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Start Docker services
-        run: docker compose up -d
+      - name: Build and start Docker services
+        run: docker compose build && docker compose up -d
 
       - name: Wait for services to be ready
-        run: sleep 5
+        run: |
+          echo "Waiting for service to be ready..."
+          for i in {1..30}; do
+            if nc -z 127.0.0.1 8080 2>/dev/null; then
+              echo "Service is ready!"
+              exit 0
+            fi
+            echo "Attempt $i/30, waiting..."
+            sleep 2
+          done
+          echo "Service failed to start"
+          exit 1
 
       - name: Set up Python
         uses: actions/setup-python@v4

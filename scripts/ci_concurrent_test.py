@@ -354,7 +354,8 @@ async def concurrent_test(uri: str) -> int:
 
 async def main():
     """主入口。"""
-    uri = "ws://127.0.0.1:8080"
+    import os
+    uri = os.environ.get("WS_URI", "ws://127.0.0.1:8080")
     
     print("=" * 60)
     print("CI 并发操作与幂等性验证")
