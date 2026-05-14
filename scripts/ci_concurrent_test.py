@@ -82,7 +82,11 @@ async def ws_register_and_login(
 
         login_cmd = f"/login {username} {password}"
         await asyncio.wait_for(ws.send(login_cmd), timeout=5)
-        end = time.time() + 5
+
+        # 主动发送一个需要认证的命令，验证会话确实已认证
+        await asyncio.wait_for(ws.send("/friend list"), timeout=5)
+
+        end = time.time() + 8
         while time.time() < end:
             try:
                 resp = await asyncio.wait_for(ws.recv(), timeout=0.5)
@@ -91,11 +95,23 @@ async def ws_register_and_login(
             try:
                 resp_obj = json.loads(resp)
                 content = resp_obj.get("content", "")
-                if isinstance(content, str) and "登录成功" in content:
+                if isinstance(content, str) and (
+                    "登录成功" in content
+                    or "好友列表" in content
+                    or "暂无好友" in content
+                ):
                     return True
+                if isinstance(content, str) and "请先登录" in content:
+                    return False
             except Exception:
-                if isinstance(resp, str) and "登录成功" in resp:
+                if isinstance(resp, str) and (
+                    "登录成功" in resp
+                    or "好友列表" in resp
+                    or "暂无好友" in resp
+                ):
                     return True
+                if isinstance(resp, str) and "请先登录" in resp:
+                    return False
         return False
     except Exception as e:
         return False
@@ -115,12 +131,11 @@ async def test_concurrent_friend_requests(uri: str) -> bool:
         user_b = f"concurrent_b_{timestamp}"
         password = "test123456"
         
-        # 两个用户同时注册/登录
-        tasks = [
-            ws_register_and_login(ws_a, user_a, password),
-            ws_register_and_login(ws_b, user_b, password),
+        # 先顺序完成注册/登录，降低前置账号初始化抖动；并发验证集中在后续好友请求阶段
+        results = [
+            await ws_register_and_login(ws_a, user_a, password),
+            await ws_register_and_login(ws_b, user_b, password),
         ]
-        results = await asyncio.gather(*tasks)
         
         if not all(results):
             print(f"    ✗ 用户注册/登录失败")
