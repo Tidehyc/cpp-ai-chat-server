@@ -85,12 +85,25 @@ async def test_ai_request_timeout(uri: str) -> bool:
 
         login_cmd = f"/login {username} {password}"
         await asyncio.wait_for(ws.send(login_cmd), timeout=5)
-        resp = await asyncio.wait_for(ws.recv(), timeout=5)
-        try:
-            resp_obj = json.loads(resp)
-            success = isinstance(resp_obj.get("content"), str) and "登录成功" in resp_obj.get("content")
-        except Exception:
-            success = "登录成功" in resp
+
+        # 循环读取消息，查找登录成功提示
+        end = time.time() + 5
+        success = False
+        while time.time() < end:
+            try:
+                resp = await asyncio.wait_for(ws.recv(), timeout=0.5)
+            except asyncio.TimeoutError:
+                continue
+            try:
+                resp_obj = json.loads(resp)
+                content = resp_obj.get("content", "")
+                if isinstance(content, str) and "登录成功" in content:
+                    success = True
+                    break
+            except Exception:
+                if isinstance(resp, str) and "登录成功" in resp:
+                    success = True
+                    break
 
         if not success:
             print(f"    ✗ 登录失败")
@@ -237,17 +250,29 @@ async def test_connection_recovery(uri: str) -> bool:
             ws = await ws_connect(uri, timeout=5)
             print(f"    ✓ 重新连接成功")
             
-            # 重新登录
-            login_msg = json.dumps({
-                "type": "login",
-                "username": username,
-                "password": password,
-            })
-            await asyncio.wait_for(ws.send(login_msg), timeout=5)
-            resp = await asyncio.wait_for(ws.recv(), timeout=5)
-            resp_obj = json.loads(resp)
-            
-            if resp_obj.get("success"):
+            # 重新登录（命令格式）
+            login_cmd = f"/login {username} {password}"
+            await asyncio.wait_for(ws.send(login_cmd), timeout=5)
+
+            end = time.time() + 5
+            relogin_success = False
+            while time.time() < end:
+                try:
+                    resp = await asyncio.wait_for(ws.recv(), timeout=0.5)
+                except asyncio.TimeoutError:
+                    continue
+                try:
+                    resp_obj = json.loads(resp)
+                    content = resp_obj.get("content", "")
+                    if isinstance(content, str) and "登录成功" in content:
+                        relogin_success = True
+                        break
+                except Exception:
+                    if isinstance(resp, str) and "登录成功" in resp:
+                        relogin_success = True
+                        break
+
+            if relogin_success:
                 print(f"    ✓ 重连后登录成功，连接恢复正常")
                 await ws.close()
                 return True
