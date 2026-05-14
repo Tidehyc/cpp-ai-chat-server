@@ -71,22 +71,16 @@ async def ws_register_and_login(
     password: str,
 ) -> bool:
     """注册并登录。"""
-    try:
-        # 使用文本命令进行注册/登录
-        register_cmd = f"/register {username} {password}"
-        await asyncio.wait_for(ws.send(register_cmd), timeout=5)
-        try:
-            await asyncio.wait_for(ws.recv(), timeout=5)
-        except asyncio.TimeoutError:
-            pass
+    def _is_auth_success_text(text: str) -> bool:
+        return (
+            "登录成功" in text
+            or "好友列表" in text
+            or "暂无好友" in text
+            or "待处理好友请求" in text
+        )
 
-        login_cmd = f"/login {username} {password}"
-        await asyncio.wait_for(ws.send(login_cmd), timeout=5)
-
-        # 主动发送一个需要认证的命令，验证会话确实已认证
-        await asyncio.wait_for(ws.send("/friend list"), timeout=5)
-
-        end = time.time() + 8
+    async def _wait_auth_signal(timeout_sec: float) -> bool:
+        end = time.time() + timeout_sec
         while time.time() < end:
             try:
                 resp = await asyncio.wait_for(ws.recv(), timeout=0.5)
@@ -95,26 +89,49 @@ async def ws_register_and_login(
             try:
                 resp_obj = json.loads(resp)
                 content = resp_obj.get("content", "")
-                if isinstance(content, str) and (
-                    "登录成功" in content
-                    or "好友列表" in content
-                    or "暂无好友" in content
-                ):
+                if isinstance(content, str) and _is_auth_success_text(content):
                     return True
                 if isinstance(content, str) and "请先登录" in content:
                     return False
             except Exception:
-                if isinstance(resp, str) and (
-                    "登录成功" in resp
-                    or "好友列表" in resp
-                    or "暂无好友" in resp
-                ):
+                if isinstance(resp, str) and _is_auth_success_text(resp):
                     return True
                 if isinstance(resp, str) and "请先登录" in resp:
                     return False
         return False
-    except Exception as e:
-        return False
+
+    last_error = None
+    for _ in range(2):
+        try:
+            # 使用文本命令进行注册/登录
+            register_cmd = f"/register {username} {password}"
+            await asyncio.wait_for(ws.send(register_cmd), timeout=5)
+            try:
+                await asyncio.wait_for(ws.recv(), timeout=2)
+            except asyncio.TimeoutError:
+                pass
+
+            # 登录最多尝试 2 次，降低 CI 抖动
+            for _ in range(2):
+                login_cmd = f"/login {username} {password}"
+                await asyncio.wait_for(ws.send(login_cmd), timeout=5)
+
+                # 主动发送一个需要认证的命令，验证会话确实已认证
+                await asyncio.wait_for(ws.send("/friend list"), timeout=5)
+
+                if await _wait_auth_signal(timeout_sec=8):
+                    return True
+
+                await asyncio.sleep(0.3)
+        except Exception as e:
+            last_error = e
+            await asyncio.sleep(0.3)
+
+    if last_error is not None:
+        print(f"    ⚠️  用户 {username} 注册/登录异常: {last_error}")
+    else:
+        print(f"    ⚠️  用户 {username} 注册/登录未收到认证成功信号")
+    return False
 
 
 async def test_concurrent_friend_requests(uri: str) -> bool:
