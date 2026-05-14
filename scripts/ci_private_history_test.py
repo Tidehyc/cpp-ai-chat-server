@@ -19,17 +19,6 @@ from datetime import datetime
 import websockets
 
 
-def compose_cmd() -> str:
-    """检测本地 docker-compose 或 docker compose 命令。"""
-    result = subprocess.run(["docker-compose", "--version"], capture_output=True)
-    if result.returncode == 0:
-        return "docker-compose"
-    result = subprocess.run(["docker", "compose", "--version"], capture_output=True)
-    if result.returncode == 0:
-        return "docker"
-    raise RuntimeError("无法找到 docker-compose 或 docker compose 命令")
-
-
 def find_chat_server_container() -> Optional[str]:
     """查找运行中的 chat-server 容器名称。"""
     result = subprocess.run(
@@ -46,19 +35,25 @@ def find_chat_server_container() -> Optional[str]:
 
 
 def ensure_docker_compose_up() -> None:
-    """确保 docker-compose 容器已启动。"""
-    compose = compose_cmd()
+    """确保 docker 容器已启动。如果已在运行，则跳过。"""
     container = find_chat_server_container()
     
     if container:
         print(f"  -> 容器已存在：{container}")
         return
     
+    # 仅在本地开发时启动容器（在 CI 中，容器已由工作流启动）
     print(f"  -> 启动容器 (docker compose up -d)")
-    if compose == "docker-compose":
-        subprocess.run(["docker-compose", "up", "-d"], check=True)
-    else:
-        subprocess.run(["docker", "compose", "up", "-d"], check=True)
+    try:
+        subprocess.run(["docker", "compose", "up", "-d"], check=True, capture_output=True)
+    except FileNotFoundError:
+        # Fallback to docker-compose for older systems
+        try:
+            subprocess.run(["docker-compose", "up", "-d"], check=True, capture_output=True)
+        except FileNotFoundError:
+            print("  ⚠️  无法启动容器（docker compose/docker-compose 命令未找到）")
+            print("     假设在 CI 环境中容器已由工作流启动")
+            return
     time.sleep(2)
 
 
