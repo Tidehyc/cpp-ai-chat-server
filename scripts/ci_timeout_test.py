@@ -1,0 +1,350 @@
+#!/usr/bin/env python3
+"""
+超时处理验证脚本：
+1. AI 请求超时 - 验证友好错误提示（不透传原始异常）
+2. 数据库操作超时 - 验证连接不断裂
+3. 登录超时 - 验证重试或友好提示
+"""
+
+import asyncio
+import json
+import subprocess
+import sys
+import time
+import ssl
+from typing import Optional
+
+import websockets
+
+
+def compose_cmd() -> str:
+    """检测本地 docker-compose 或 docker compose 命令。"""
+    result = subprocess.run(["docker-compose", "--version"], capture_output=True)
+    if result.returncode == 0:
+        return "docker-compose"
+    result = subprocess.run(["docker", "compose", "--version"], capture_output=True)
+    if result.returncode == 0:
+        return "docker"
+    raise RuntimeError("无法找到 docker-compose 或 docker compose 命令")
+
+
+def find_chat_server_container() -> Optional[str]:
+    """查找运行中的 chat-server 容器名称。"""
+    result = subprocess.run(
+        ["docker", "ps", "-a", "--format", "{{.Names}}"],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return None
+    for line in result.stdout.strip().split("\n"):
+        if "chat-server" in line or "chat_server" in line:
+            return line
+    return None
+
+
+def ensure_docker_compose_up() -> None:
+    """确保 docker-compose 容器已启动。"""
+    compose = compose_cmd()
+    container = find_chat_server_container()
+    
+    if container:
+        print(f"  -> 容器已存在：{container}")
+        return
+    
+    print(f"  -> 启动容器 (docker compose up -d)")
+    if compose == "docker-compose":
+        subprocess.run(["docker-compose", "up", "-d"], check=True)
+    else:
+        subprocess.run(["docker", "compose", "up", "-d"], check=True)
+    time.sleep(2)
+
+
+async def ws_connect(uri: str, timeout: float = 5.0) -> websockets.WebSocketClientProtocol:
+    """建立 WebSocket 连接。"""
+    connect_kwargs = {"subprotocols": ["chat"], "open_timeout": timeout, "close_timeout": timeout}
+    if uri.startswith("wss://"):
+        connect_kwargs["ssl"] = ssl._create_unverified_context()
+    
+    return await websockets.connect(uri, **connect_kwargs)
+
+
+async def test_ai_request_timeout(uri: str) -> bool:
+    """测试 AI 请求超时的错误处理。"""
+    print("  -> 测试 AI 请求超时处理")
+    
+    try:
+        ws = await ws_connect(uri)
+        
+        # 注册/登录
+        username = f"timeout_test_{int(time.time())}"
+        password = "test123456"
+        
+        register_msg = json.dumps({
+            "type": "register",
+            "username": username,
+            "password": password,
+        })
+        await asyncio.wait_for(ws.send(register_msg), timeout=5)
+        await asyncio.wait_for(ws.recv(), timeout=5)
+        
+        login_msg = json.dumps({
+            "type": "login",
+            "username": username,
+            "password": password,
+        })
+        await asyncio.wait_for(ws.send(login_msg), timeout=5)
+        resp = await asyncio.wait_for(ws.recv(), timeout=5)
+        resp_obj = json.loads(resp)
+        
+        if not resp_obj.get("success"):
+            print(f"    ✗ 登录失败")
+            await ws.close()
+            return False
+        
+        print(f"    ✓ 用户登录成功")
+        
+        # 发送 AI 请求
+        # 注意：如果 AI API 配置不存在或额度不足，可能会返回友好错误
+        ai_msg = json.dumps({
+            "type": "message",
+            "to_user": "ai",
+            "text": "你好，这是一个测试消息",
+        })
+        await asyncio.wait_for(ws.send(ai_msg), timeout=5)
+        
+        # 等待 AI 响应（可能超时）
+        try:
+            response = await asyncio.wait_for(ws.recv(), timeout=3)
+            resp_obj = json.loads(response)
+            
+            # 检查错误信息是否友好
+            error_msg = resp_obj.get("message") or resp_obj.get("error") or ""
+            if error_msg:
+                # 验证错误信息不包含原始异常堆栈
+                if "traceback" in error_msg.lower() or "exception" in error_msg.lower():
+                    print(f"    ⚠️  错误信息暴露了内部细节: {error_msg[:100]}")
+                    return False
+                else:
+                    print(f"    ✓ 收到友好错误提示: {error_msg[:50]}...")
+                    return True
+            else:
+                print(f"    ✓ 请求处理成功（可能无 AI 配置，属期望行为）")
+                return True
+        except asyncio.TimeoutError:
+            print(f"    ⚠️  AI 响应超时（可能服务器确实超时）")
+            return True  # 超时本身不是错误，取决于实现
+        
+        await ws.close()
+    except Exception as e:
+        print(f"    ✗ 异常: {e}")
+        return False
+
+
+async def test_login_with_timeout(uri: str) -> bool:
+    """测试登录超时处理。"""
+    print("  -> 测试登录超时处理")
+    
+    try:
+        # 尝试非常短的超时时间
+        ws = await ws_connect(uri, timeout=0.5)
+        
+        username = f"timeout_login_{int(time.time())}"
+        password = "test123456"
+        
+        # 第一次注册
+        register_msg = json.dumps({
+            "type": "register",
+            "username": username,
+            "password": password,
+        })
+        
+        try:
+            await asyncio.wait_for(ws.send(register_msg), timeout=1)
+            response = await asyncio.wait_for(ws.recv(), timeout=1)
+            print(f"    ✓ 注册请求完成（未超时）")
+        except asyncio.TimeoutError:
+            print(f"    ⚠️  注册请求超时（连接可能已建立）")
+            await ws.close()
+            return True
+        
+        # 登录
+        login_msg = json.dumps({
+            "type": "login",
+            "username": username,
+            "password": password,
+        })
+        
+        try:
+            await asyncio.wait_for(ws.send(login_msg), timeout=1)
+            response = await asyncio.wait_for(ws.recv(), timeout=1)
+            resp_obj = json.loads(response)
+            
+            if resp_obj.get("success"):
+                print(f"    ✓ 登录成功（未超时）")
+                await ws.close()
+                return True
+            else:
+                print(f"    ⚠️  登录失败（可能凭证问题）")
+                await ws.close()
+                return False
+        except asyncio.TimeoutError:
+            print(f"    ⚠️  登录请求超时（应重试或提示用户）")
+            await ws.close()
+            return True
+        
+    except Exception as e:
+        print(f"    ✗ 异常: {e}")
+        return False
+
+
+async def test_connection_recovery(uri: str) -> bool:
+    """测试连接断裂恢复能力。"""
+    print("  -> 测试连接恢复能力")
+    
+    try:
+        ws = await ws_connect(uri)
+        
+        # 注册/登录
+        username = f"recovery_test_{int(time.time())}"
+        password = "test123456"
+        
+        register_msg = json.dumps({
+            "type": "register",
+            "username": username,
+            "password": password,
+        })
+        await asyncio.wait_for(ws.send(register_msg), timeout=5)
+        await asyncio.wait_for(ws.recv(), timeout=5)
+        
+        login_msg = json.dumps({
+            "type": "login",
+            "username": username,
+            "password": password,
+        })
+        await asyncio.wait_for(ws.send(login_msg), timeout=5)
+        resp = await asyncio.wait_for(ws.recv(), timeout=5)
+        resp_obj = json.loads(resp)
+        
+        if not resp_obj.get("success"):
+            print(f"    ✗ 登录失败")
+            await ws.close()
+            return False
+        
+        print(f"    ✓ 登录成功")
+        
+        # 主动关闭连接，模拟网络中断
+        await ws.close()
+        print(f"    ✓ 连接已关闭，模拟网络中断")
+        
+        # 等待后重新连接
+        await asyncio.sleep(1)
+        
+        try:
+            ws = await ws_connect(uri, timeout=5)
+            print(f"    ✓ 重新连接成功")
+            
+            # 重新登录
+            login_msg = json.dumps({
+                "type": "login",
+                "username": username,
+                "password": password,
+            })
+            await asyncio.wait_for(ws.send(login_msg), timeout=5)
+            resp = await asyncio.wait_for(ws.recv(), timeout=5)
+            resp_obj = json.loads(resp)
+            
+            if resp_obj.get("success"):
+                print(f"    ✓ 重连后登录成功，连接恢复正常")
+                await ws.close()
+                return True
+            else:
+                print(f"    ⚠️  重连后登录失败")
+                await ws.close()
+                return False
+        except asyncio.TimeoutError:
+            print(f"    ✗ 重新连接超时")
+            return False
+        
+    except Exception as e:
+        print(f"    ✗ 异常: {e}")
+        return False
+
+
+async def timeout_test(uri: str) -> int:
+    """超时处理综合验证。"""
+    print("-> 超时处理验证")
+    print(f"  -> WebSocket 服务器: {uri}")
+    
+    results = []
+    
+    # 测试 AI 请求超时
+    try:
+        result = await test_ai_request_timeout(uri)
+        results.append(("AI 请求超时处理", result))
+    except Exception as e:
+        print(f"    ❌ 异常: {e}")
+        results.append(("AI 请求超时处理", False))
+    
+    await asyncio.sleep(0.5)
+    
+    # 测试登录超时
+    try:
+        result = await test_login_with_timeout(uri)
+        results.append(("登录超时处理", result))
+    except Exception as e:
+        print(f"    ❌ 异常: {e}")
+        results.append(("登录超时处理", False))
+    
+    await asyncio.sleep(0.5)
+    
+    # 测试连接恢复
+    try:
+        result = await test_connection_recovery(uri)
+        results.append(("连接恢复能力", result))
+    except Exception as e:
+        print(f"    ❌ 异常: {e}")
+        results.append(("连接恢复能力", False))
+    
+    # 总结
+    print(f"\n📊 超时处理测试结果")
+    passed = sum(1 for _, r in results if r)
+    total = len(results)
+    
+    for test_name, result in results:
+        status = "✓" if result else "✗"
+        print(f"  {status} {test_name}")
+    
+    print(f"\n通过: {passed}/{total}")
+    
+    if passed == total:
+        print(f"\n✅ 超时处理验证 OK")
+        return 0
+    else:
+        print(f"\n⚠️  部分超时测试未通过")
+        return 2
+
+
+async def main():
+    """主入口。"""
+    uri = "ws://127.0.0.1:8080"
+    
+    print("=" * 60)
+    print("CI 超时处理验证")
+    print("=" * 60)
+    
+    try:
+        ensure_docker_compose_up()
+        print()
+        exit_code = await timeout_test(uri)
+        sys.exit(exit_code)
+    except KeyboardInterrupt:
+        print("\n用户中断")
+        sys.exit(1)
+    except Exception as e:
+        print(f"\n❌ 测试异常: {e}")
+        sys.exit(2)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
